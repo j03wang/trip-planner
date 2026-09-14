@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Structured itinerary map open input",
+  "type": "object",
+  "required": ["documentId"],
+  "additionalProperties": false,
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "description": "Stable itinerary/document identity. It is intentionally independent from the transient canvas instanceId."
+    },
+    "itinerary": {
+      "$ref": "itinerary.schema.json"
+    },
+    "itineraryPath": {
+      "type": "string",
+      "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+\\.json$",
+      "maxLength": 500,
+      "description": "Workspace-relative path to a JSON itinerary document."
+    },
+    "initialFocus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "locationId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "dayId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["itinerary"],
+      "not": {
+        "required": ["itineraryPath"]
+      }
+    },
+    {
+      "required": ["itineraryPath"],
+      "not": {
+        "required": ["itinerary"]
+      }
+    }
+  ]
+}
