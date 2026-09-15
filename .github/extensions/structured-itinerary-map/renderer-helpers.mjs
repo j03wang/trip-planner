@@ -287,13 +287,21 @@ export function chooseMarkerLeg(legs, filters, currentLegId = "") {
     return visible.find((leg) => leg.id === currentLegId) ?? visible[0];
 }
 
+export function transportCategoryForMode(mode) {
+    return mode === "flight" ? "flight" : "transfer";
+}
+
 export function legMatchesFilters(leg, {
     selectedDayId,
     selectedLocationId,
+    selectedCategories,
     transportEnabled,
     placesById,
 }) {
-    if (!transportEnabled) return false;
+    const categoryEnabled = selectedCategories
+        ? selectedCategories.has(transportCategoryForMode(leg.mode))
+        : transportEnabled;
+    if (!categoryEnabled) return false;
     if (selectedDayId && leg.dayId !== selectedDayId) return false;
     if (!selectedLocationId) return true;
     const origin = placesById.get(leg.originPlaceId);
@@ -546,19 +554,18 @@ export function canonicalMarkerStates({
         if (selectedLocationId && row.effectiveLocationId !== selectedLocationId) continue;
         setState(row.place.id, selectedDayId && row.day.id !== selectedDayId ? "context" : "active");
     }
-    if (selectedCategories.has("transport")) {
-        for (const leg of transportLegs) {
-            if ((leg.status ?? "planned") === "cancelled"
-                || (leg.dayId && (daysById.get(leg.dayId)?.status ?? "planned") === "cancelled")) continue;
-            const active = !selectedDayId || leg.dayId === selectedDayId;
-            const origin = placesById.get(leg.originPlaceId);
-            const destination = placesById.get(leg.destinationPlaceId);
-            if (active && selectedLocationId
-                && origin?.locationId !== selectedLocationId && destination?.locationId !== selectedLocationId) continue;
-            for (const placeId of [leg.originPlaceId, leg.destinationPlaceId]) {
-                if (!active && selectedLocationId && placesById.get(placeId)?.locationId !== selectedLocationId) continue;
-                setState(placeId, active ? "active" : "context");
-            }
+    for (const leg of transportLegs) {
+        if (!selectedCategories.has(transportCategoryForMode(leg.mode))) continue;
+        if ((leg.status ?? "planned") === "cancelled"
+            || (leg.dayId && (daysById.get(leg.dayId)?.status ?? "planned") === "cancelled")) continue;
+        const active = !selectedDayId || leg.dayId === selectedDayId;
+        const origin = placesById.get(leg.originPlaceId);
+        const destination = placesById.get(leg.destinationPlaceId);
+        if (active && selectedLocationId
+            && origin?.locationId !== selectedLocationId && destination?.locationId !== selectedLocationId) continue;
+        for (const placeId of [leg.originPlaceId, leg.destinationPlaceId]) {
+            if (!active && selectedLocationId && placesById.get(placeId)?.locationId !== selectedLocationId) continue;
+            setState(placeId, active ? "active" : "context");
         }
     }
     for (const placeId of selectedPlaceIds) setState(placeId, "selected");

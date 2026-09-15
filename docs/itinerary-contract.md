@@ -341,6 +341,8 @@ A transport leg is a schedule-bearing journey between two places.
 
 If `lines` is omitted, the renderer draws a direct overview line between endpoint coordinates and splits a dateline crossing for display. Explicit geometry must already be antimeridian-safe: split it into separate lines at `180/-180` so adjacent points within one line never differ by more than 180 degrees.
 
+The viewer exposes independent **Flight** and **Transfer** category filters. `flight` legs appear under Flight; every other schema 1.0 mode (`walk`, `bike`, `drive`, `bus`, `rail`, `ferry`, and `other`) appears under Transfer. Filtering either category affects its timeline rows, routes, and endpoint markers without changing transport-leg selection semantics.
+
 Normal browsing filters routes by selected day/destination. Explicitly selecting a transport leg overrides those browsing filters for that leg, renders a high-contrast path above ordinary route and stay-area layers, keeps both endpoint markers visible and selected, and fits the complete multi-line geometry. Camera fitting unwraps longitudes across line segments so a dateline route frames the short crossing rather than nearly the whole world.
 
 #### Multi-location transfer day

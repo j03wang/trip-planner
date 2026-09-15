@@ -533,7 +533,9 @@ test("component follows dark and reduced-motion preferences without host CSS lea
             maplibregl: fakeMapLibre(records),
             mapErrorDelay: 50,
         }));
-        appendSource(window, "map-trip", sample);
+        const mixedTransportSample = structuredClone(sample);
+        mixedTransportSample.transportLegs[1].mode = "drive";
+        appendSource(window, "map-trip", mixedTransportSample);
         const element = appendMap(window, "map-trip");
         await new Promise((resolveTick) => setTimeout(resolveTick, 40));
         assert.equal(records.maps.length, 1);
@@ -647,12 +649,24 @@ test("component follows dark and reduced-motion preferences without host CSS lea
 
         daySelect.value = "hanoi-old-quarter";
         daySelect.dispatchEvent(new window.Event("change"));
-        const transportChip = [...element.shadowRoot.querySelectorAll("#chips .chip")]
-            .find((button) => button.textContent.includes("Transport"));
-        transportChip.click();
+        const categoryChips = [...element.shadowRoot.querySelectorAll("#chips .chip")];
+        const flightChip = categoryChips.find((button) => button.textContent.includes("Flight"));
+        const transferChip = categoryChips.find((button) => button.textContent.includes("Transfer"));
+        assert(flightChip);
+        assert(transferChip);
+        assert.equal(flightChip.getAttribute("aria-label"), "Flight category filter");
+        assert.equal(transferChip.getAttribute("aria-label"), "Transfer category filter");
+        assert.notEqual(
+            flightChip.querySelector(".dot").style.background,
+            transferChip.querySelector(".dot").style.background,
+        );
+        transferChip.click();
+        assert.equal(markerFor("Noi Bai").added, true, "transfer filtering must not hide flight endpoints");
+        flightChip.click();
         assert.equal(markerFor("Noi Bai").added, false);
-        transportChip.click();
+        flightChip.click();
         assert.equal(markerFor("Noi Bai").added, true);
+        transferChip.click();
         markerFor("Noi Bai").element.click();
         await tick();
         assertHanoiFilters();

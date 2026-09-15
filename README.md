@@ -29,6 +29,7 @@ The command uses the exact canonical JSON Schema and semantic validator, enforce
 ## Features
 
 - Destination, day, category, and stay-area controls
+- Independent Flight and Transfer controls for schema 1.0 transport legs
 - Active, selected, and contextual markers without implicit filter navigation
 - Transport routes, including antimeridian-safe multi-line geometry
 - Recommended stay-area polygons
@@ -62,7 +63,7 @@ Create one static HTML document containing a validated itinerary, reference the 
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
+    integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
     crossorigin="anonymous"></script>
 </head>
 <body>

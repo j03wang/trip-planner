@@ -29,6 +29,7 @@ import {
     themeFromPreference as resolveTheme,
     timelineEntriesForDay,
     transformMapStyle as transformStyleForTheme,
+    transportCategoryForMode,
     transportSelection,
     unwrapTransportPoints as unwrapLegPoints,
     visibleStayLocationIds,
@@ -458,10 +459,12 @@ export function startCanvasApp({
       for (const place of referencedPlaces) {
       if (markers.has(place.id)) continue;
       const scheduled = placeActivities.get(place.id) || [];
-      const category = place.category || scheduled[0]?.category || "transport";
+      const endpointLeg = (legsByPlace.get(place.id) || [])[0];
+      const category = scheduled[0]?.category
+        || (endpointLeg ? transportCategoryForMode(endpointLeg.mode) : place.category);
       const wrapper = document.createElement("button");
       wrapper.type = "button";
-      wrapper.className = "pin-wrap" + (category === "transport" ? " transport" : "");
+      wrapper.className = "pin-wrap" + ((legsByPlace.get(place.id) || []).length ? " transport" : "");
       wrapper.setAttribute("aria-label", "Show " + place.name + " schedule");
       wrapper.setAttribute("aria-pressed", "false");
       const pin = document.createElement("span");
@@ -488,7 +491,7 @@ export function startCanvasApp({
         const markerLeg = chooseVisibleMarkerLeg(legsByPlace.get(place.id) || [], {
           selectedDayId,
           selectedLocationId,
-          transportEnabled: selectedCategories.has("transport"),
+          selectedCategories,
           placesById
         }, selectedLegId);
         if (markerLeg) {
@@ -506,7 +509,7 @@ export function startCanvasApp({
         const contextLeg = chooseVisibleMarkerLeg(legsByPlace.get(place.id) || [], {
           selectedDayId: "",
           selectedLocationId,
-          transportEnabled: selectedCategories.has("transport"),
+          selectedCategories,
           placesById
         }, selectedLegId);
         if (contextLeg) selectTransportLeg(contextLeg.id, place.id);
@@ -724,6 +727,7 @@ export function startCanvasApp({
       button.type = "button";
       button.className = "chip";
       button.setAttribute("aria-pressed", "true");
+      button.setAttribute("aria-label", style.label + " category filter");
       const dot = document.createElement("span");
       dot.className = "dot";
       dot.style.background = style.color;
@@ -734,7 +738,9 @@ export function startCanvasApp({
           selectedActivityId = "";
           selectedMarkerPlaceIds = new Set();
         }
-        if (category === "transport" && !selectedCategories.has("transport")) {
+        if (selectedLegId
+          && transportCategoryForMode(transportLegsById.get(selectedLegId).mode) === category
+          && !selectedCategories.has(category)) {
           selectedLegId = "";
           selectedMarkerPlaceIds = new Set();
         }
@@ -786,7 +792,7 @@ export function startCanvasApp({
       return transportLegs.filter(leg => matchesLegFilters(leg, {
         selectedDayId,
         selectedLocationId,
-        transportEnabled: selectedCategories.has("transport"),
+        selectedCategories,
         placesById
       }));
     }
@@ -808,7 +814,7 @@ export function startCanvasApp({
     function updateMapLayers(visibleLegIds = visibleTransportLegIds(transportLegs, {
       selectedDayId,
       selectedLocationId,
-      transportEnabled: selectedCategories.has("transport"),
+      selectedCategories,
       placesById
     })) {
       if (!map || !styleReady) return;
@@ -876,11 +882,17 @@ export function startCanvasApp({
           visibleMarkerIds.delete(placeId);
         }
         const wrapper = marker.getElement();
+        const activeLeg = (legsByPlace.get(placeId) || []).find(leg =>
+          selectedCategories.has(transportCategoryForMode(leg.mode))
+          && (!selectedDayId || leg.dayId === selectedDayId))
+          || (legsByPlace.get(placeId) || []).find(leg =>
+            selectedCategories.has(transportCategoryForMode(leg.mode)));
         const activeCategory = scheduled.find(row => selectedCategories.has(row.category)
           && (!selectedDayId || row.day.id === selectedDayId))?.category
           || scheduled.find(row => selectedCategories.has(row.category))?.category
+          || (activeLeg ? transportCategoryForMode(activeLeg.mode) : undefined)
           || placesById.get(placeId).category
-          || "transport";
+          || "transfer";
         wrapper.querySelector(".pin").style.background = styles[activeCategory]?.color || "#57606a";
         for (const state of ["active", "context", "selected"]) {
           wrapper.classList.toggle(state, markerState === state);
@@ -1073,6 +1085,7 @@ export function startCanvasApp({
       card.dataset.legId = leg.id;
       card.setAttribute("aria-pressed", String(selectedLegId === leg.id));
       card.setAttribute("aria-label", transportAriaLabel(leg, origin, destination));
+      card.style.setProperty("--accent", styles[transportCategoryForMode(leg.mode)].color);
 
       const timeSlot = document.createElement("span");
       timeSlot.className = "time-slot";

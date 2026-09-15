@@ -45,6 +45,7 @@ import {
     themeFromPreference,
     timelineEntriesForDay,
     transformMapStyle,
+    transportCategoryForMode,
     transportSelection,
     unwrapCoordinates,
     unwrapTransportPoints,
@@ -491,27 +492,37 @@ test("user filter transitions preserve ownership boundaries", () => {
     });
 });
 
-test("transport filtering honors category, day, and either endpoint location", () => {
+test("transport filtering honors flight and transfer categories, day, and either endpoint location", () => {
     const placesById = new Map(sample.places.map((place) => [place.id, place]));
     const leg = sample.transportLegs[0];
+    assert.equal(transportCategoryForMode("flight"), "flight");
+    for (const mode of ["walk", "bike", "drive", "bus", "rail", "ferry", "other"]) {
+        assert.equal(transportCategoryForMode(mode), "transfer");
+    }
     assert.equal(legMatchesFilters(leg, {
         selectedDayId: "",
         selectedLocationId: "saigon",
-        transportEnabled: true,
+        selectedCategories: new Set(["flight"]),
         placesById,
     }), true);
     assert.equal(legMatchesFilters(leg, {
         selectedDayId: "singapore-waterfront",
         selectedLocationId: "",
-        transportEnabled: true,
+        selectedCategories: new Set(["flight"]),
         placesById,
     }), false);
     assert.equal(legMatchesFilters(leg, {
         selectedDayId: "",
         selectedLocationId: "",
-        transportEnabled: false,
+        selectedCategories: new Set(["transfer"]),
         placesById,
     }), false);
+    assert.equal(legMatchesFilters({ ...leg, mode: "drive" }, {
+        selectedDayId: "",
+        selectedLocationId: "",
+        selectedCategories: new Set(["transfer"]),
+        placesById,
+    }), true);
 });
 
 test("activity filtering honors category, day, and effective location", () => {
@@ -642,7 +653,7 @@ test("marker states retain filtered day context without widening camera bounds",
         effectiveLocationId: activity.placeId ? placesById.get(activity.placeId)?.locationId : activity.locationId,
         effectiveStatus: activity.status ?? "planned",
     })));
-    const selectedCategories = new Set(["street", "culture", "rest", "transport", "architecture", "food"]);
+    const selectedCategories = new Set(["street", "culture", "rest", "flight", "transfer", "architecture", "food"]);
     const hanoiStates = canonicalMarkerStates({
         activityRows,
         transportLegs: sample.transportLegs,

@@ -1,6 +1,7 @@
 import {
     resolveFocus,
     safeJson,
+    transportCategoryForMode,
 } from "./renderer-helpers.mjs";
 import { MAPLIBRE_SCRIPT, MAPLIBRE_STYLESHEET } from "./maplibre-config.mjs";
 
@@ -16,16 +17,18 @@ const DEFAULT_CATEGORY_COLORS = [
 ];
 
 function categoryStyles(itinerary) {
+    const transportCategories = (itinerary.transportLegs ?? []).map((leg) => transportCategoryForMode(leg.mode));
     const categories = [...new Set([
         ...itinerary.days.flatMap((day) => day.activities.map((activity) => activity.category)),
         ...itinerary.places.flatMap((place) => place.category ? [place.category] : []),
-        ...(itinerary.transportLegs?.length ? ["transport"] : []),
+        ...transportCategories,
     ])];
     return Object.fromEntries(categories.map((category, index) => [
         category,
         {
             label: itinerary.categoryStyles?.[category]?.label ?? category.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-            color: itinerary.categoryStyles?.[category]?.color ?? DEFAULT_CATEGORY_COLORS[index % DEFAULT_CATEGORY_COLORS.length],
+            color: itinerary.categoryStyles?.[category]?.color
+                ?? (category === "flight" ? "#0969da" : category === "transfer" ? "#8250df" : DEFAULT_CATEGORY_COLORS[index % DEFAULT_CATEGORY_COLORS.length]),
         },
     ]));
 }

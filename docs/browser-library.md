@@ -30,7 +30,7 @@ The build generates artifacts in memory. `npm run build:check` compares that exp
 ```html
 <script defer
   src="https://example.com/assets/itinerary-map.v1.js"
-  integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
+  integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
   crossorigin="anonymous"></script>
 <itinerary-map data-source="trip-data" style-nonce="CONTENT_SPECIFIC_NONCE"></itinerary-map>
 <script id="trip-data" type="application/json" nonce="CONTENT_SPECIFIC_NONCE">
@@ -56,7 +56,7 @@ Load the library with `defer`, size the custom element explicitly, and place iti
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
+    integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
     crossorigin="anonymous"></script>
 </head>
 <body>
@@ -179,6 +179,7 @@ The map and timeline expose one itinerary state:
 - **Selected markers** identify the focused activity or transport endpoints.
 - **Context markers** belong to another day within the active destination/trip scope. Their labels identify them as not on the selected day; activating one selects and frames its map context without changing the destination or day filters.
 - Category filters apply to active and context markers.
+- Transport legs use independent **Flight** and **Transfer** filters: `flight` maps to Flight, while `walk`, `bike`, `drive`, `bus`, `rail`, `ferry`, and `other` map to Transfer.
 - Cancelled activities do not produce normal markers.
 - Unreferenced catalog places do not appear and do not affect camera bounds.
 - Selected transport endpoints and routes have the strongest map emphasis.
