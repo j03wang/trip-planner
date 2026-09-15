@@ -46,7 +46,9 @@ import {
     timelineEntriesForDay,
     transformMapStyle,
     transportCategoryForMode,
+    transportRouteProperties,
     transportSelection,
+    transportStatusStyle,
     unwrapCoordinates,
     unwrapTransportPoints,
     visibleStayLocationIds,
@@ -525,6 +527,48 @@ test("transport filtering honors flight and transfer categories, day, and either
     }), true);
 });
 
+test("transport route data uses category color while status controls emphasis and pattern", () => {
+    const categoryStyles = {
+        flight: { label: "Flight", color: "#123456" },
+        transfer: { label: "Transfer", color: "#abcdef" },
+    };
+    assert.deepEqual(
+        transportRouteProperties({ id: "air", mode: "flight", name: "Air", dayId: "day-1" }, categoryStyles),
+        {
+            id: "air",
+            dayId: "day-1",
+            status: "planned",
+            mode: "flight",
+            name: "Air",
+            transportCategory: "flight",
+            categoryColor: "#123456",
+        },
+    );
+    assert.equal(
+        transportRouteProperties({ id: "rail", mode: "rail" }, categoryStyles, "tentative").categoryColor,
+        "#abcdef",
+    );
+    const booked = transportStatusStyle("booked");
+    const planned = transportStatusStyle("planned");
+    const optional = transportStatusStyle("optional");
+    const tentative = transportStatusStyle("tentative");
+    const cancelled = transportStatusStyle("cancelled");
+    assert(booked.width > planned.width);
+    assert(booked.opacity > planned.opacity);
+    assert.equal(booked.dasharray, undefined);
+    assert.equal(planned.dasharray, undefined);
+    assert.notDeepEqual(optional.dasharray, tentative.dasharray);
+    assert.notDeepEqual(tentative.dasharray, cancelled.dasharray);
+    assert(cancelled.opacity < optional.opacity);
+    for (const status of ["booked", "planned", "optional", "tentative", "cancelled"]) {
+        const ordinary = transportStatusStyle(status);
+        const selected = transportStatusStyle(status, { selected: true });
+        assert(selected.width > ordinary.width);
+        assert(selected.opacity >= ordinary.opacity);
+        assert.deepEqual(selected.dasharray, ordinary.dasharray);
+    }
+});
+
 test("activity filtering honors category, day, and effective location", () => {
     const row = {
         category: "culture",
@@ -950,9 +994,7 @@ test("theme helpers select public basemap styles and coherent palettes", () => {
     const dark = mapPalette("dark");
     assert.equal(light.casing, "#ffffff");
     assert.equal(dark.casing, "#081018");
-    assert.equal(dark.selected, "#8bd0ff");
     assert.equal(dark.stayFillOpacity, 0.14);
-    assert.notEqual(light.route, dark.route);
     assert.notEqual(light.stayLabel, dark.stayLabel);
     assert.deepEqual(Object.keys(light), Object.keys(dark));
 });

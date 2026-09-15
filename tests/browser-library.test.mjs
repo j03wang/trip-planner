@@ -535,12 +535,44 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         }));
         const mixedTransportSample = structuredClone(sample);
         mixedTransportSample.transportLegs[1].mode = "drive";
+        mixedTransportSample.categoryStyles.flight = { label: "Flight", color: "#1357a6" };
+        mixedTransportSample.categoryStyles.transfer = { label: "Transfer", color: "#7b3fb5" };
         appendSource(window, "map-trip", mixedTransportSample);
         const element = appendMap(window, "map-trip");
         await new Promise((resolveTick) => setTimeout(resolveTick, 40));
         assert.equal(records.maps.length, 1);
         assert(records.maps[0].sources.has("itinerary-transport"));
-        assert(records.maps[0].layers.has("transport-active"));
+        const transportFeatures = records.maps[0].sources.get("itinerary-transport").data.features;
+        assert.deepEqual(
+            transportFeatures.map(({ properties }) => [
+                properties.id,
+                properties.transportCategory,
+                properties.categoryColor,
+            ]),
+            [
+                ["hanoi-to-saigon", "flight", "#1357a6"],
+                ["saigon-to-singapore", "transfer", "#7b3fb5"],
+            ],
+        );
+        for (const status of ["booked", "planned", "optional", "tentative", "cancelled"]) {
+            const ordinary = records.maps[0].layers.get(`transport-${status}`);
+            const selected = records.maps[0].layers.get(`transport-selected-${status}`);
+            assert.deepEqual(ordinary.paint["line-color"], ["get", "categoryColor"]);
+            assert.deepEqual(selected.paint["line-color"], ["get", "categoryColor"]);
+            assert(selected.paint["line-width"] > ordinary.paint["line-width"]);
+            assert(selected.paint["line-opacity"] >= ordinary.paint["line-opacity"]);
+            assert.deepEqual(selected.paint["line-dasharray"], ordinary.paint["line-dasharray"]);
+        }
+        assert.equal(records.maps[0].layers.get("transport-booked").paint["line-dasharray"], undefined);
+        assert.equal(records.maps[0].layers.get("transport-planned").paint["line-dasharray"], undefined);
+        assert.notDeepEqual(
+            records.maps[0].layers.get("transport-optional").paint["line-dasharray"],
+            records.maps[0].layers.get("transport-tentative").paint["line-dasharray"],
+        );
+        assert.notDeepEqual(
+            records.maps[0].layers.get("transport-tentative").paint["line-dasharray"],
+            records.maps[0].layers.get("transport-cancelled").paint["line-dasharray"],
+        );
         assert.equal(records.markers.length, sample.places.length);
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1400 });
         element.shadowRoot.querySelector(".shell").getBoundingClientRect = () => ({ width: 420 });
@@ -639,6 +671,11 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         assert.equal(scrollCalls.length, 1, "direct transport activation must not call scrollIntoView");
         assert(markerFor("Noi Bai").element.classList.contains("selected"));
         assert(markerFor("Tan Son Nhat").element.classList.contains("selected"));
+        assert.equal(markerFor("Noi Bai").element.querySelector(".pin").style.background, "#1357a6");
+        assert.equal(
+            element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]').style.getPropertyValue("--accent"),
+            "#1357a6",
+        );
 
         daySelect.value = "";
         daySelect.dispatchEvent(new window.Event("change"));
@@ -652,12 +689,18 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         const categoryChips = [...element.shadowRoot.querySelectorAll("#chips .chip")];
         const flightChip = categoryChips.find((button) => button.textContent.includes("Flight"));
         const transferChip = categoryChips.find((button) => button.textContent.includes("Transfer"));
+        const userTransportChip = categoryChips.find((button) => button.textContent.trim() === "Transport");
         assert(flightChip);
         assert(transferChip);
+        assert(userTransportChip, "an itinerary-defined transport category must remain independent");
         assert.equal(flightChip.getAttribute("aria-label"), "Flight category filter");
         assert.equal(transferChip.getAttribute("aria-label"), "Transfer category filter");
         assert.notEqual(
             flightChip.querySelector(".dot").style.background,
+            transferChip.querySelector(".dot").style.background,
+        );
+        assert.notEqual(
+            userTransportChip.querySelector(".dot").style.background,
             transferChip.querySelector(".dot").style.background,
         );
         transferChip.click();
@@ -680,7 +723,7 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         );
         records.maps[0].emit("click", {
             features: [{ properties: { id: "hanoi-to-saigon" } }],
-        }, "transport-selected");
+        }, "transport-selected-booked");
         assertHanoiFilters();
         assert(records.cameras.some(([kind]) => kind === "bounds"));
 
@@ -704,8 +747,23 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         assert.equal(element.shadowRoot.querySelector(".legend").open, false);
         assert.equal(element.shadowRoot.querySelector(".legend summary").getAttribute("aria-expanded"), "false");
         const legendItems = [...element.shadowRoot.querySelectorAll(".legend-grid > span")];
-        assert.equal(legendItems[0].textContent, "Booked / planned leg");
-        assert.equal(legendItems[0].firstElementChild.className, "legend-route");
+        assert.deepEqual(
+            legendItems.slice(0, 7).map((item) => item.textContent),
+            [
+                "Flight",
+                "Transfer",
+                "Booked: strongest solid",
+                "Planned: lighter solid",
+                "Optional: long dash",
+                "Tentative: short dash",
+                "Cancelled: sparse dotted",
+            ],
+        );
+        assert.equal(legendItems[0].firstElementChild.className, "legend-route category");
+        assert.equal(legendItems[0].firstElementChild.style.getPropertyValue("--legend-route-color"), "#1357a6");
+        assert.equal(legendItems[1].firstElementChild.style.getPropertyValue("--legend-route-color"), "#7b3fb5");
+        assert.equal(legendItems[2].firstElementChild.className, "legend-route booked");
+        assert.equal(legendItems[4].firstElementChild.className, "legend-route optional");
         assert.equal(legendItems.at(-1).textContent, "Stay area");
         assert.equal(legendItems.at(-1).firstElementChild.className, "stay-swatch");
         assert.match(element.shadowRoot.getElementById("filter-summary").textContent, /categories/);

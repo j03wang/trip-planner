@@ -30,7 +30,9 @@ import {
     timelineEntriesForDay,
     transformMapStyle as transformStyleForTheme,
     transportCategoryForMode,
+    transportRouteProperties,
     transportSelection,
+    transportStatusStyle,
     unwrapTransportPoints as unwrapLegPoints,
     visibleStayLocationIds,
     visibleTransportLegIds,
@@ -538,7 +540,12 @@ export function startCanvasApp({
         const legId = event.features?.[0]?.properties?.id;
         if (legId) selectTransportLeg(legId);
       };
-      for (const layerId of ["transport-active", "transport-tentative", "transport-cancelled", "transport-selected"]) {
+      for (const layerId of [
+        "transport-booked", "transport-planned", "transport-optional",
+        "transport-tentative", "transport-cancelled",
+        "transport-selected-booked", "transport-selected-planned", "transport-selected-optional",
+        "transport-selected-tentative", "transport-selected-cancelled",
+      ]) {
         map.on("click", layerId, selectRoute);
         map.on("mouseenter", layerId, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layerId, () => { map.getCanvas().style.cursor = ""; });
@@ -550,9 +557,11 @@ export function startCanvasApp({
       rebuildingMapStyle = true;
       try {
       const palette = paletteForTheme(pendingMapTheme);
+      const statuses = ["booked", "planned", "optional", "tentative", "cancelled"];
       [
-        "transport-selected", "transport-selected-casing", "stay-label", "stay-outline",
-        "stay-fill", "transport-cancelled", "transport-tentative", "transport-active", "transport-casing"
+        ...statuses.map(status => "transport-selected-" + status),
+        "transport-selected-casing", "stay-label", "stay-outline", "stay-fill",
+        ...statuses.map(status => "transport-" + status), "transport-casing"
       ].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
       ["stay-areas", "itinerary-transport"].forEach(id => { if (map.getSource(id)) map.removeSource(id); });
       map.addSource("itinerary-transport", {
@@ -566,13 +575,13 @@ export function startCanvasApp({
             return {
               type: "Feature",
               properties: {
-                id: leg.id,
-                dayId: leg.dayId || "",
+                ...transportRouteProperties(
+                  leg,
+                  styles,
+                  legIsCancelled(leg) ? "cancelled" : (leg.status || "planned"),
+                ),
                 originLocationId: origin.locationId,
                 destinationLocationId: destination.locationId,
-                status: legIsCancelled(leg) ? "cancelled" : (leg.status || "planned"),
-                mode: leg.mode,
-                name: leg.name || leg.mode
               },
               geometry: {
                 type: "MultiLineString",
@@ -584,27 +593,23 @@ export function startCanvasApp({
       });
       map.addLayer({
         id: "transport-casing", type: "line", source: "itinerary-transport",
-        paint: { "line-color": palette.casing, "line-width": 7, "line-opacity": .9 }
+        paint: { "line-color": palette.casing, "line-width": 7.4, "line-opacity": .82 }
       });
-      map.addLayer({
-        id: "transport-active", type: "line", source: "itinerary-transport",
-        filter: ["in", ["get", "status"], ["literal", ["booked", "planned", "optional"]]],
-        paint: {
-          "line-color": ["match", ["get", "status"], "booked", palette.route, palette.routeMuted],
-          "line-width": 3.2,
-          "line-opacity": .9
-        }
-      });
-      map.addLayer({
-        id: "transport-tentative", type: "line", source: "itinerary-transport",
-        filter: ["==", ["get", "status"], "tentative"],
-        paint: { "line-color": palette.tentative, "line-width": 3, "line-opacity": .9, "line-dasharray": [2, 1.5] }
-      });
-      map.addLayer({
-        id: "transport-cancelled", type: "line", source: "itinerary-transport",
-        filter: ["==", ["get", "status"], "cancelled"],
-        paint: { "line-color": palette.cancelled, "line-width": 2.6, "line-opacity": .65, "line-dasharray": [1, 2] }
-      });
+      for (const status of statuses) {
+        const routeStyle = transportStatusStyle(status);
+        map.addLayer({
+          id: "transport-" + status,
+          type: "line",
+          source: "itinerary-transport",
+          filter: ["==", ["get", "status"], status],
+          paint: {
+            "line-color": ["get", "categoryColor"],
+            "line-width": routeStyle.width,
+            "line-opacity": routeStyle.opacity,
+            ...(routeStyle.dasharray ? { "line-dasharray": routeStyle.dasharray } : {}),
+          },
+        });
+      }
       map.addSource("stay-areas", {
         type: "geojson",
         data: {
@@ -631,15 +636,21 @@ export function startCanvasApp({
         filter: ["==", ["get", "id"], ""],
         paint: { "line-color": palette.casing, "line-width": 10, "line-opacity": .98 }
       });
-      map.addLayer({
-        id: "transport-selected", type: "line", source: "itinerary-transport",
-        filter: ["==", ["get", "id"], ""],
-        paint: {
-          "line-color": ["match", ["get", "status"], "cancelled", palette.selectedCancelled, "tentative", palette.tentative, palette.selected],
-          "line-width": 5.8,
-          "line-opacity": 1
-        }
-      });
+      for (const status of statuses) {
+        const selectedStyle = transportStatusStyle(status, { selected: true });
+        map.addLayer({
+          id: "transport-selected-" + status,
+          type: "line",
+          source: "itinerary-transport",
+          filter: ["all", ["==", ["get", "id"], ""], ["==", ["get", "status"], status]],
+          paint: {
+            "line-color": ["get", "categoryColor"],
+            "line-width": selectedStyle.width,
+            "line-opacity": selectedStyle.opacity,
+            ...(selectedStyle.dasharray ? { "line-dasharray": selectedStyle.dasharray } : {}),
+          },
+        });
+      }
       bindMapInteractions();
       styleReady = true;
       lastMapFilterSignature = "";
@@ -829,12 +840,12 @@ export function startCanvasApp({
       lastMapFilterSignature = filterSignature;
       const baseTransportFilter = ["in", ["get", "id"], ["literal", visibleLegIds]];
       map.setFilter("transport-casing", baseTransportFilter);
-      map.setFilter("transport-active", combineFilters(baseTransportFilter, ["in", ["get", "status"], ["literal", ["booked", "planned", "optional"]]]));
-      map.setFilter("transport-tentative", combineFilters(baseTransportFilter, ["==", ["get", "status"], "tentative"]));
-      map.setFilter("transport-cancelled", combineFilters(baseTransportFilter, ["==", ["get", "status"], "cancelled"]));
       const selectedLegFilter = ["==", ["get", "id"], selectedLegId || ""];
+      for (const status of ["booked", "planned", "optional", "tentative", "cancelled"]) {
+        map.setFilter("transport-" + status, combineFilters(baseTransportFilter, ["==", ["get", "status"], status]));
+        map.setFilter("transport-selected-" + status, combineFilters(selectedLegFilter, ["==", ["get", "status"], status]));
+      }
       map.setFilter("transport-selected-casing", selectedLegFilter);
-      map.setFilter("transport-selected", selectedLegFilter);
       const stayVisibility = stayAreasVisible ? "visible" : "none";
       ["stay-fill", "stay-outline", "stay-label"].forEach(id => map.setLayoutProperty(id, "visibility", stayVisibility));
       const stayFilter = stayLocationIds.length
@@ -1398,13 +1409,18 @@ export function startCanvasApp({
     const grid = document.createElement("div");
     grid.className = "legend-grid";
     [
-      ["legend-route", "Booked / planned leg"],
-      ["legend-route tentative", "Tentative leg"],
-      ["legend-route cancelled", "Cancelled leg"]
-    ].forEach(([className, label]) => {
+      ["legend-route category", "Flight", styles.flight?.color || "#0969da"],
+      ["legend-route category", "Transfer", styles.transfer?.color || "#8250df"],
+      ["legend-route booked", "Booked: strongest solid"],
+      ["legend-route planned", "Planned: lighter solid"],
+      ["legend-route optional", "Optional: long dash"],
+      ["legend-route tentative", "Tentative: short dash"],
+      ["legend-route cancelled", "Cancelled: sparse dotted"]
+    ].forEach(([className, label, color]) => {
       const item = document.createElement("span");
       const swatch = document.createElement("span");
       swatch.className = className;
+      if (color) swatch.style.setProperty("--legend-route-color", color);
       item.append(swatch, document.createTextNode(label));
       grid.appendChild(item);
     });

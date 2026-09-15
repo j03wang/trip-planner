@@ -343,7 +343,9 @@ If `lines` is omitted, the renderer draws a direct overview line between endpoin
 
 The viewer exposes independent **Flight** and **Transfer** category filters. `flight` legs appear under Flight; every other schema 1.0 mode (`walk`, `bike`, `drive`, `bus`, `rail`, `ferry`, and `other`) appears under Transfer. Filtering either category affects its timeline rows, routes, and endpoint markers without changing transport-leg selection semantics.
 
-Normal browsing filters routes by selected day/destination. Explicitly selecting a transport leg overrides those browsing filters for that leg, renders a high-contrast path above ordinary route and stay-area layers, keeps both endpoint markers visible and selected, and fits the complete multi-line geometry. Camera fitting unwraps longitudes across line segments so a dateline route frames the short crossing rather than nearly the whole world.
+Route color represents this structural category, not status. `categoryStyles.flight` and `categoryStyles.transfer` therefore override the shared color of structural route lines, cards, category controls, and endpoint markers. Line width, opacity, and pattern independently communicate status, reinforced by text badges.
+
+Normal browsing filters routes by selected day/destination. Explicitly selecting a transport leg overrides those browsing filters for that leg, renders a neutral high-contrast casing and thicker category-colored path above ordinary route and stay-area layers, retains its status pattern, keeps both endpoint markers visible and selected, and fits the complete multi-line geometry. Camera fitting unwraps longitudes across line segments so a dateline route frames the short crossing rather than nearly the whole world.
 
 #### Multi-location transfer day
 
@@ -475,7 +477,7 @@ Each `categoryStyles` property name must be a category key. Its value accepts:
 | `label` | No | Non-empty string, at most 60 characters. |
 | `color` | No | Six-digit hexadecimal color such as `"#0969da"`. |
 
-An empty style object is valid. Categories can appear in activities or places without a matching style; the renderer supplies a fallback label/color. Category styles do not create itinerary items.
+An empty style object is valid. Categories can appear in activities or places without a matching style; the renderer supplies a fallback label/color. Category styles do not create itinerary items. The reserved renderer categories `flight` and `transfer` style structural transport route lines, cards, controls, and endpoint markers; an itinerary-defined activity or place category literally named `transport` remains unrelated.
 
 ## Time and timezone semantics
 
@@ -506,7 +508,7 @@ Programmatic `set_focus` and in-canvas navigation share one coherent focus model
 - A day/location pair is accepted only when the day includes that location.
 - Empty focus (`{}`), including through `set_focus`, means trip overview.
 
-The server is authoritative for programmatic focus. Every SSE connection immediately receives the current focus, so a command sent before the browser connects is not lost. User navigation is posted back to the loopback server through a same-origin, per-instance-token endpoint, keeping reconnect state consistent. The `/state` endpoint and `get_summary` action report this latest synchronized focus; selection of an activity or transport leg also synchronizes the day/destination controls it changes.
+The server is authoritative for programmatic focus. Every SSE connection immediately receives the current focus, so a command sent before the browser connects is not lost. Explicit Destination, Day, day-heading, and Overview navigation is posted back to the loopback server through a same-origin, per-instance-token endpoint, keeping reconnect state consistent. Activity, transport, marker, and route selection remains local and does not alter synchronized filters. The `/state` endpoint and `get_summary` action report the latest synchronized focus.
 
 The timeline and controls do not depend on MapLibre initialization. They are usable when the integrity-pinned library, style, or tiles are offline; the map area reports that persistent degraded state without repeatedly announcing it. Overview and selection framing use referenced visible places when available. With no such geometry, the renderer safely retains its last/default camera rather than constructing invalid bounds.
 
@@ -517,7 +519,7 @@ Days, activities, and transport legs share the same status enum. A missing statu
 - Statuses appear as text badges, so meaning is not color-only.
 - A cancelled day appears in the timeline; its activities and associated legs are treated as cancelled for visual/map behavior even when their own status says otherwise.
 - Cancelled activities appear subdued in the timeline with a cancellation badge; they do not contribute markers.
-- Cancelled transport legs appear in the timeline and as a subdued dashed route. Selecting one reveals its route and both endpoints.
+- Transport route color identifies Flight or Transfer. Status is independent: booked is strongest solid, planned is lighter solid, optional is long-dashed, tentative is short-dashed, and cancelled is subdued and sparsely dotted. Selecting a leg preserves its category hue and status pattern while adding a neutral high-contrast casing and stronger width.
 - Schedule-only activities appear with an explicit label, regardless of status.
 - Selecting a day keeps non-cancelled, category-enabled mapped places from other days visible as subdued context markers within the active destination. Context markers are labelled as not being on the selected day; clicking one selects and frames its map context without changing the destination or day filters, emptying the timeline, or widening the selected day's ordinary camera bounds.
 

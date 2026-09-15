@@ -29,7 +29,7 @@ The command uses the exact canonical JSON Schema and semantic validator, enforce
 ## Features
 
 - Destination, day, category, and stay-area controls
-- Independent Flight and Transfer controls for schema 1.0 transport legs
+- Independent Flight and Transfer controls and category-colored routes for schema 1.0 transport legs
 - Active, selected, and contextual markers without implicit filter navigation
 - Transport routes, including antimeridian-safe multi-line geometry
 - Recommended stay-area polygons
@@ -37,13 +37,18 @@ The command uses the exact canonical JSON Schema and semantic validator, enforce
 - System light/dark themes, keyboard navigation, reduced-motion support, and accessible diagnostics
 - Hash-based focus synchronization as an explicit per-component option
 - Strict JSON Schema and semantic validation with actionable errors
+- Map-independent timeline and controls when WebGL or map resources are unavailable
 
 Destination and Day are explicit filters. Only the Destination selector changes
 the destination; only the Day selector or a visible day heading changes the day.
 Selecting an activity, transport leg, marker, or route highlights and frames that
 map content without changing either filter. **Overview** explicitly clears both
 filters and returns to the trip-wide view.
-- Map-independent timeline and controls when WebGL or map resources are unavailable
+
+Transport route color identifies the structural type: Flight uses the resolved
+`categoryStyles.flight` color and Transfer uses `categoryStyles.transfer`.
+Line width, opacity, and pattern independently distinguish booked, planned,
+optional, tentative, and cancelled status; cards retain text status badges.
 
 ## Recommended usage
 
@@ -63,7 +68,7 @@ Create one static HTML document containing a validated itinerary, reference the 
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
+    integrity="sha384-Q/FzKE1ea9uKoGDG+fUa3mqFWvpnBEHyA8MwpsWPODnjda8DRi4bNNrVd0NMCAY8"
     crossorigin="anonymous"></script>
 </head>
 <body>

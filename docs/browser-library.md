@@ -30,7 +30,7 @@ The build generates artifacts in memory. `npm run build:check` compares that exp
 ```html
 <script defer
   src="https://example.com/assets/itinerary-map.v1.js"
-  integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
+  integrity="sha384-Q/FzKE1ea9uKoGDG+fUa3mqFWvpnBEHyA8MwpsWPODnjda8DRi4bNNrVd0NMCAY8"
   crossorigin="anonymous"></script>
 <itinerary-map data-source="trip-data" style-nonce="CONTENT_SPECIFIC_NONCE"></itinerary-map>
 <script id="trip-data" type="application/json" nonce="CONTENT_SPECIFIC_NONCE">
@@ -56,7 +56,7 @@ Load the library with `defer`, size the custom element explicitly, and place iti
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-uhV5t66GGSey7H9HevHWKjPiI6sRsQmS2Q7H8G4iHvGqEvYfOYE7sNAboUMdoqLd"
+    integrity="sha384-Q/FzKE1ea9uKoGDG+fUa3mqFWvpnBEHyA8MwpsWPODnjda8DRi4bNNrVd0NMCAY8"
     crossorigin="anonymous"></script>
 </head>
 <body>
@@ -180,9 +180,10 @@ The map and timeline expose one itinerary state:
 - **Context markers** belong to another day within the active destination/trip scope. Their labels identify them as not on the selected day; activating one selects and frames its map context without changing the destination or day filters.
 - Category filters apply to active and context markers.
 - Transport legs use independent **Flight** and **Transfer** filters: `flight` maps to Flight, while `walk`, `bike`, `drive`, `bus`, `rail`, `ferry`, and `other` map to Transfer.
+- Route color represents that structural category and uses the same resolved `categoryStyles.flight` or `categoryStyles.transfer` color as its card and endpoints. Width, opacity, and pattern represent status: booked is the strongest solid line, planned is a lighter solid line, optional uses a long dash, tentative uses a short dash, and cancelled uses a subdued sparse dotted line. Text badges provide the status without relying on line appearance alone.
 - Cancelled activities do not produce normal markers.
 - Unreferenced catalog places do not appear and do not affect camera bounds.
-- Selected transport endpoints and routes have the strongest map emphasis.
+- Selected transport endpoints and routes have the strongest map emphasis while retaining their Flight or Transfer color and status pattern.
 
 The timeline can stay day-filtered while the map provides contextual orientation.
 

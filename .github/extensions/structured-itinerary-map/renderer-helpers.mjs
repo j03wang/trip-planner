@@ -159,12 +159,6 @@ export function mapPalette(theme) {
     return theme === "dark"
         ? {
             casing: "#081018",
-            route: "#58b8ff",
-            routeMuted: "#d0dae4",
-            tentative: "#f2cc60",
-            cancelled: "#b1bac4",
-            selected: "#8bd0ff",
-            selectedCancelled: "#ff7b72",
             stay: "#45c6c9",
             stayLabel: "#b8f3f4",
             labelHalo: "#081018",
@@ -172,12 +166,6 @@ export function mapPalette(theme) {
         }
         : {
             casing: "#ffffff",
-            route: "#0969da",
-            routeMuted: "#57606a",
-            tentative: "#9a6700",
-            cancelled: "#6e7781",
-            selected: "#0969da",
-            selectedCancelled: "#cf222e",
             stay: "#008b8b",
             stayLabel: "#006b6b",
             labelHalo: "#ffffff",
@@ -289,6 +277,37 @@ export function chooseMarkerLeg(legs, filters, currentLegId = "") {
 
 export function transportCategoryForMode(mode) {
     return mode === "flight" ? "flight" : "transfer";
+}
+
+export function transportRouteProperties(leg, categoryStyles, status = leg.status ?? "planned") {
+    const transportCategory = transportCategoryForMode(leg.mode);
+    return {
+        id: leg.id,
+        dayId: leg.dayId ?? "",
+        status,
+        mode: leg.mode,
+        name: leg.name ?? leg.mode,
+        transportCategory,
+        categoryColor: categoryStyles[transportCategory].color,
+    };
+}
+
+const TRANSPORT_STATUS_STYLES = Object.freeze({
+    booked: Object.freeze({ width: 3.8, opacity: 1 }),
+    planned: Object.freeze({ width: 3.2, opacity: 0.82 }),
+    optional: Object.freeze({ width: 3, opacity: 0.78, dasharray: Object.freeze([4, 2]) }),
+    tentative: Object.freeze({ width: 3, opacity: 0.9, dasharray: Object.freeze([2, 1.5]) }),
+    cancelled: Object.freeze({ width: 2.6, opacity: 0.55, dasharray: Object.freeze([0.5, 2.5]) }),
+});
+
+export function transportStatusStyle(status, { selected = false } = {}) {
+    const base = TRANSPORT_STATUS_STYLES[status] ?? TRANSPORT_STATUS_STYLES.planned;
+    return {
+        ...base,
+        width: selected ? base.width + 2.6 : base.width,
+        opacity: selected ? Math.min(1, base.opacity + 0.15) : base.opacity,
+        ...(base.dasharray ? { dasharray: [...base.dasharray] } : {}),
+    };
 }
 
 export function legMatchesFilters(leg, {

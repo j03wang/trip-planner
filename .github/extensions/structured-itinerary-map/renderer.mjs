@@ -276,9 +276,16 @@ ${standalonePolicy}${generatorMetadata}  <meta name="viewport" content="width=de
     }
     .legend summary { cursor: pointer; font-weight: 600; }
     .legend-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 5px; }
-    .legend-route { display: inline-block; width: 18px; margin-right: 5px; border-top: 3px solid var(--canvas-accent); vertical-align: 3px; }
-    .legend-route.tentative { border-color: var(--canvas-attention); border-top-style: dashed; }
-    .legend-route.cancelled { border-color: var(--canvas-fg-muted); border-top-style: dashed; opacity: .85; }
+    .legend-route {
+      --legend-route-color: currentColor; display: inline-block; width: 24px; height: 6px; margin-right: 5px;
+      background: linear-gradient(var(--legend-route-color), var(--legend-route-color)) center / 100% 3px no-repeat;
+      vertical-align: 1px;
+    }
+    .legend-route.category, .legend-route.booked { background-size: 100% 4px; }
+    .legend-route.planned { opacity: .82; }
+    .legend-route.optional { background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 18px) center / 100% 3px no-repeat; opacity: .78; }
+    .legend-route.tentative { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 11px) center / 100% 3px no-repeat; opacity: .9; }
+    .legend-route.cancelled { background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 10px) center / 100% 3px no-repeat; opacity: .55; }
     .stay-swatch { display: inline-block; width: 11px; height: 11px; margin-right: 5px; border: 2px dashed var(--canvas-stay); background: color-mix(in srgb, var(--canvas-stay) 34%, transparent); vertical-align: -1px; }
     .error {
       position: absolute; z-index: 10; inset: 12px auto auto 12px; max-width: calc(100% - 24px); padding: 10px 12px;
