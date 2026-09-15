@@ -30,7 +30,7 @@ The build generates artifacts in memory. `npm run build:check` compares that exp
 ```html
 <script defer
   src="https://example.com/assets/itinerary-map.v1.js"
-  integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
+  integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
   crossorigin="anonymous"></script>
 <itinerary-map data-source="trip-data" style-nonce="CONTENT_SPECIFIC_NONCE"></itinerary-map>
 <script id="trip-data" type="application/json" nonce="CONTENT_SPECIFIC_NONCE">
@@ -56,7 +56,7 @@ Load the library with `defer`, size the custom element explicitly, and place iti
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
+    integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
     crossorigin="anonymous"></script>
 </head>
 <body>
@@ -190,6 +190,12 @@ filter. The Day selector and visible day headings are the only interactions that
 change the day filter. Activity rows, transport rows, markers, and routes change
 selection, popup, and camera state only. **Overview** is the explicit reset and
 clears both filters.
+
+Selecting a timeline row preserves the timeline scroll position and keyboard
+focus. Marker selection may reveal a corresponding rendered row with the
+smallest necessary scroll; hidden contextual rows do not move the timeline.
+Destination, Day, day-heading, and Overview changes reset the timeline to its
+beginning because they replace the visible filter scope.
 
 ## Sizing and responsive controls
 

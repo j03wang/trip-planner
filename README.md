@@ -62,7 +62,7 @@ Create one static HTML document containing a validated itinerary, reference the 
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
+    integrity="sha384-VN5McEKi4OrEPOcITnq+6yaSzusWfAPuN7K/r0LEJUfXjqpW/2REQgmMkMCLc/OW"
     crossorigin="anonymous"></script>
 </head>
 <body>

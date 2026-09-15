@@ -686,7 +686,7 @@ export function startCanvasApp({
       if (selectedLocationId) focusLocation(selectedLocationId);
       else if (selectedDayId) focusDay(selectedDayId);
       else focusPlaces(currentVisiblePlaces());
-      render();
+      render({ resetListScroll: true });
       syncFocus();
     });
 
@@ -714,7 +714,7 @@ export function startCanvasApp({
         focusDay(selectedDayId);
       } else if (selectedLocationId) focusLocation(selectedLocationId);
       else focusPlaces(currentVisiblePlaces());
-      render();
+      render({ resetListScroll: true });
       syncFocus();
     });
 
@@ -769,7 +769,7 @@ export function startCanvasApp({
       locationSelect.value = "";
       daySelect.value = "";
       updateDayOptions();
-      render();
+      render({ resetListScroll: true });
       focusPlaces(currentVisiblePlaces());
       syncFocus();
     });
@@ -837,7 +837,9 @@ export function startCanvasApp({
       ["stay-fill", "stay-outline", "stay-label"].forEach(id => map.setFilter(id, stayFilter));
     }
 
-    function render() {
+    function render({ preserveListScroll = false, resetListScroll = false } = {}) {
+      const list = document.getElementById("list");
+      const nextScrollTop = preserveListScroll ? list.scrollTop : resetListScroll ? 0 : undefined;
       const focusedSelector = selectorForFocus(focusIdentity(document.activeElement), CSS.escape);
       const rows = visibleActivities();
       const filteredLegs = visibleLegs();
@@ -926,7 +928,6 @@ export function startCanvasApp({
           if (note.tip) { const p = document.createElement("p"); p.className = "muted"; p.textContent = "Tip: " + note.tip; notePanel.appendChild(p); }
         }
       }
-      const list = document.getElementById("list");
       list.replaceChildren();
       for (const day of orderedDays) {
         const dayId = day.id;
@@ -969,7 +970,7 @@ export function startCanvasApp({
           selectedLegId = "";
           selectedMarkerPlaceIds = new Set();
           daySelect.value = selectedDayId;
-          render();
+          render({ resetListScroll: true });
           if (selectedDayId) focusDay(selectedDayId);
           syncFocus();
         });
@@ -991,7 +992,19 @@ export function startCanvasApp({
         unscheduledLegs.forEach(leg => section.appendChild(renderTransportCard(leg)));
         list.appendChild(section);
       }
-      if (focusedSelector) list.querySelector(focusedSelector)?.focus({ preventScroll: true });
+      const restoreListScroll = () => {
+        if (nextScrollTop !== undefined) list.scrollTop = nextScrollTop;
+      };
+      const focusedElement = focusedSelector ? list.querySelector(focusedSelector) : null;
+      if (focusedElement) {
+        try {
+          focusedElement.focus({ preventScroll: true });
+        } catch {
+          focusedElement.focus();
+        }
+      }
+      restoreListScroll();
+      if (nextScrollTop !== undefined) requestAnimationFrame(restoreListScroll);
     }
 
     function renderActivityCard(row) {
@@ -1169,6 +1182,15 @@ export function startCanvasApp({
       focusPlaces(places);
     }
 
+    function revealTimelineRow(selector) {
+      requestAnimationFrame(() => {
+        document.querySelector(selector)?.scrollIntoView({
+          block: "nearest",
+          behavior: reducedMotion() ? "auto" : "smooth",
+        });
+      });
+    }
+
     function selectActivity(activityId, fromMarker = false) {
       const row = activitiesById.get(activityId);
       if (!row) return;
@@ -1176,7 +1198,7 @@ export function startCanvasApp({
       selectedActivityId = selection.activityId;
       selectedLegId = selection.legId;
       selectedMarkerPlaceIds = new Set(selection.placeIds);
-      render();
+      render({ preserveListScroll: !fromMarker });
       if (row.place && !activityIsCancelled(row)) {
         if (map && styleReady) {
         map.flyTo({
@@ -1193,7 +1215,7 @@ export function startCanvasApp({
         }
         }
       }
-      requestAnimationFrame(() => document.querySelector('[data-id="' + CSS.escape(activityId) + '"]')?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" }));
+      if (fromMarker) revealTimelineRow('[data-id="' + CSS.escape(activityId) + '"]');
     }
 
     function selectTransportLeg(legId, markerPlaceId = "") {
@@ -1205,7 +1227,7 @@ export function startCanvasApp({
       selectedActivityId = selection.activityId;
       selectedLegId = selection.legId;
       selectedMarkerPlaceIds = new Set(selection.placeIds);
-      render();
+      render({ preserveListScroll: !markerPlaceId });
       focusTransportLeg(leg);
       if (markerPlaceId) {
         const marker = markers.get(markerPlaceId);
@@ -1213,7 +1235,7 @@ export function startCanvasApp({
           if (marker && !marker.getPopup().isOpen()) marker.togglePopup();
         });
       }
-      requestAnimationFrame(() => document.querySelector('[data-leg-id="' + CSS.escape(legId) + '"]')?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" }));
+      if (markerPlaceId) revealTimelineRow('[data-leg-id="' + CSS.escape(legId) + '"]');
     }
 
     function applyFocus(focus) {
@@ -1226,7 +1248,7 @@ export function startCanvasApp({
       daySelect.value = selectedDayId;
       locationSelect.value = selectedLocationId;
       updateDayOptions();
-      render();
+      render({ resetListScroll: true });
       if (selectedDayId) focusDay(selectedDayId);
       else if (selectedLocationId) focusLocation(selectedLocationId);
       else focusPlaces(currentVisiblePlaces());
@@ -1383,7 +1405,7 @@ export function startCanvasApp({
     legend.append(legendSummary, grid);
     document.getElementById("map").appendChild(legend);
 
-    render();
+    render({ resetListScroll: true });
     if (map && styleReady) applyInitialView();
 
     const handleRuntimeFocus = state => {

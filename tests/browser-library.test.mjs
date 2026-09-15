@@ -503,6 +503,26 @@ test("component follows dark and reduced-motion preferences without host CSS lea
             observe() {}
             disconnect() { resizeDisconnects += 1; }
         };
+        const scrollCalls = [];
+        const focusCalls = [];
+        let rejectPreventScrollOnce = false;
+        let simulateFallbackScrollOnce = false;
+        window.HTMLElement.prototype.scrollIntoView = function scrollIntoView(options) {
+            scrollCalls.push({ element: this, options });
+        };
+        const nativeFocus = window.HTMLElement.prototype.focus;
+        window.HTMLElement.prototype.focus = function focus(options) {
+            focusCalls.push({ element: this, options });
+            if (rejectPreventScrollOnce && options?.preventScroll) {
+                rejectPreventScrollOnce = false;
+                throw new TypeError("focus options unsupported");
+            }
+            if (simulateFallbackScrollOnce && options === undefined) {
+                simulateFallbackScrollOnce = false;
+                this.getRootNode().getElementById("list").scrollTop = 0;
+            }
+            return nativeFocus.call(this, options);
+        };
         window.fetch = async () => ({
             ok: true,
             json: async () => providerStyle(),
@@ -538,31 +558,83 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         assert(markerFor("Noi Bai").element.classList.contains("context"));
         assert.match(markerFor("Noi Bai").element.getAttribute("aria-label"), /not on selected day/);
         assert.equal(markerFor("Tan Son Nhat").added, false);
+        const list = element.shadowRoot.getElementById("list");
+        for (const [activityId, scrollTop] of [
+            ["old-quarter-walk", 1],
+            ["temple-literature-visit", 173],
+            ["midday-rest", 999],
+        ]) {
+            list.scrollTop = scrollTop;
+            element.shadowRoot.querySelector(`[data-id="${activityId}"]`).click();
+            await tick();
+            assert.equal(list.scrollTop, scrollTop, `pointer selection must preserve scroll for ${activityId}`);
+        }
         const templeCard = element.shadowRoot.querySelector('[data-id="temple-literature-visit"]');
+        list.scrollTop = 241;
+        templeCard.focus();
+        rejectPreventScrollOnce = true;
+        simulateFallbackScrollOnce = true;
+        templeCard.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         templeCard.click();
+        templeCard.dispatchEvent(new window.KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+        await tick();
         assertHanoiFilters();
+        assert.equal(list.scrollTop, 241);
         assert.equal(
             element.shadowRoot.querySelector('[data-id="temple-literature-visit"]').getAttribute("aria-pressed"),
             "true",
         );
+        assert.equal(element.shadowRoot.activeElement?.dataset.id, "temple-literature-visit");
+        assert(
+            focusCalls.some(({ element: focused, options }) =>
+                focused.dataset.id === "temple-literature-visit" && options?.preventScroll === true),
+        );
+        assert(
+            focusCalls.some(({ element: focused, options }) =>
+                focused.dataset.id === "temple-literature-visit" && options === undefined),
+            "focus fallback must run when preventScroll options are unsupported",
+        );
+        assert.equal(scrollCalls.length, 0, "direct activity activation must not call scrollIntoView");
         assert(markerFor("Temple of Literature").element.classList.contains("selected"));
         markerFor("Temple of Literature").element.click();
         await tick();
         assertHanoiFilters();
         assert.equal(markerFor("Temple of Literature").popup.isOpen(), true);
+        assert.equal(scrollCalls.length, 1);
+        assert.equal(scrollCalls[0].element.dataset.id, "temple-literature-visit");
+        assert.deepEqual(scrollCalls[0].options, { block: "nearest", behavior: "smooth" });
 
+        list.scrollTop = 615;
         daySelect.value = "saigon-central";
         daySelect.dispatchEvent(new window.Event("change"));
         assert.equal(locationSelect.value, "hanoi");
         assert.equal(daySelect.value, "saigon-central");
+        assert.equal(list.scrollTop, 0, "day filter changes reset the timeline to its beginning");
         const flightCard = element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]');
+        list.scrollTop = 312;
         flightCard.click();
+        await tick();
         assert.equal(locationSelect.value, "hanoi");
         assert.equal(daySelect.value, "saigon-central");
+        assert.equal(list.scrollTop, 312);
         assert.equal(
             element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]').getAttribute("aria-pressed"),
             "true",
         );
+        const keyboardFlightCard = element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]');
+        list.scrollTop = 428;
+        keyboardFlightCard.focus();
+        keyboardFlightCard.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+        keyboardFlightCard.click();
+        keyboardFlightCard.dispatchEvent(new window.KeyboardEvent("keyup", { key: " ", bubbles: true }));
+        await tick();
+        assert.equal(list.scrollTop, 428);
+        assert.equal(element.shadowRoot.activeElement?.dataset.legId, "hanoi-to-saigon");
+        assert(
+            focusCalls.some(({ element: focused, options }) =>
+                focused.dataset.legId === "hanoi-to-saigon" && options?.preventScroll === true),
+        );
+        assert.equal(scrollCalls.length, 1, "direct transport activation must not call scrollIntoView");
         assert(markerFor("Noi Bai").element.classList.contains("selected"));
         assert(markerFor("Tan Son Nhat").element.classList.contains("selected"));
 
@@ -587,6 +659,7 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         assert(markerFor("Noi Bai").element.classList.contains("selected"));
         assert(markerFor("Tan Son Nhat").element.classList.contains("selected"));
         assert.equal(markerFor("Noi Bai").popup.isOpen(), true);
+        assert.equal(scrollCalls.length, 1, "hidden context rows must not be scrolled into view");
         assert(
             element.shadowRoot.querySelectorAll(".day-group").length > 0,
             "context selection must not empty the timeline",
@@ -598,9 +671,11 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         assert(records.cameras.some(([kind]) => kind === "bounds"));
 
         locationSelect.value = "singapore";
+        list.scrollTop = 512;
         locationSelect.dispatchEvent(new window.Event("change"));
         assert.equal(locationSelect.value, "singapore");
         assert.equal(daySelect.value, "", "destination changes clear an incompatible day without choosing another");
+        assert.equal(list.scrollTop, 0, "destination filter changes reset the timeline to its beginning");
         locationSelect.value = "";
         locationSelect.dispatchEvent(new window.Event("change"));
         daySelect.value = "saigon-central";
