@@ -221,6 +221,43 @@ export function shouldApplyAuthoritativeFocus(result, currentFocus, daysById, lo
     return next.dayId !== (currentFocus.dayId ?? "") || next.locationId !== (currentFocus.locationId ?? "");
 }
 
+export function dayMatchesDestination(dayId, locationId, daysById) {
+    if (!dayId || !locationId) return true;
+    return Boolean(daysById.get(dayId)?.locationIds.includes(locationId));
+}
+
+export function destinationFilterTransition(filters, locationId, daysById) {
+    return {
+        locationId,
+        dayId: dayMatchesDestination(filters.dayId, locationId, daysById) ? filters.dayId : "",
+    };
+}
+
+export function dayFilterTransition(filters, dayId, daysById) {
+    if (!dayMatchesDestination(dayId, filters.locationId, daysById)) return { ...filters };
+    return { locationId: filters.locationId, dayId };
+}
+
+export function overviewFilterTransition() {
+    return { locationId: "", dayId: "" };
+}
+
+export function activitySelection(activity) {
+    return {
+        activityId: activity.id,
+        legId: "",
+        placeIds: activity.place ? [activity.place.id] : [],
+    };
+}
+
+export function transportSelection(leg) {
+    return {
+        activityId: "",
+        legId: leg.id,
+        placeIds: [leg.originPlaceId, leg.destinationPlaceId],
+    };
+}
+
 export function directTransportLines(origin, destination) {
     const start = origin.coordinates;
     const end = destination.coordinates;

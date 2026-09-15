@@ -29,13 +29,19 @@ The command uses the exact canonical JSON Schema and semantic validator, enforce
 ## Features
 
 - Destination, day, category, and stay-area controls
-- Active, selected, and contextual markers with schedule navigation
+- Active, selected, and contextual markers without implicit filter navigation
 - Transport routes, including antimeridian-safe multi-line geometry
 - Recommended stay-area polygons
 - Desktop, embedded, and mobile layouts driven by component width
 - System light/dark themes, keyboard navigation, reduced-motion support, and accessible diagnostics
 - Hash-based focus synchronization as an explicit per-component option
 - Strict JSON Schema and semantic validation with actionable errors
+
+Destination and Day are explicit filters. Only the Destination selector changes
+the destination; only the Day selector or a visible day heading changes the day.
+Selecting an activity, transport leg, marker, or route highlights and frames that
+map content without changing either filter. **Overview** explicitly clears both
+filters and returns to the trip-wide view.
 - Map-independent timeline and controls when WebGL or map resources are unavailable
 
 ## Recommended usage
@@ -56,7 +62,7 @@ Create one static HTML document containing a validated itinerary, reference the 
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-g/YuSKrmWHwCNMiVBMHgCUHtCbvbqpk6+9kuPpjZR+Ea/alZYDeNbm43q8noftnI"
+    integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
     crossorigin="anonymous"></script>
 </head>
 <body>

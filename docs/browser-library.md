@@ -30,7 +30,7 @@ The build generates artifacts in memory. `npm run build:check` compares that exp
 ```html
 <script defer
   src="https://example.com/assets/itinerary-map.v1.js"
-  integrity="sha384-g/YuSKrmWHwCNMiVBMHgCUHtCbvbqpk6+9kuPpjZR+Ea/alZYDeNbm43q8noftnI"
+  integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
   crossorigin="anonymous"></script>
 <itinerary-map data-source="trip-data" style-nonce="CONTENT_SPECIFIC_NONCE"></itinerary-map>
 <script id="trip-data" type="application/json" nonce="CONTENT_SPECIFIC_NONCE">
@@ -56,7 +56,7 @@ Load the library with `defer`, size the custom element explicitly, and place iti
   <script
     defer
     src="./dist/itinerary-map.v1.js"
-    integrity="sha384-g/YuSKrmWHwCNMiVBMHgCUHtCbvbqpk6+9kuPpjZR+Ea/alZYDeNbm43q8noftnI"
+    integrity="sha384-OyrBjvzVWV7JPJclLAo+0YEXU6gere54BOV9Nf9EwHcmI300BfcegBMZpTgwQw+X"
     crossorigin="anonymous"></script>
 </head>
 <body>
@@ -177,13 +177,19 @@ The map and timeline expose one itinerary state:
 
 - **Active markers** belong to the selected day.
 - **Selected markers** identify the focused activity or transport endpoints.
-- **Context markers** belong to another day within the active destination/trip scope. Their labels identify them as not on the selected day, and activating one navigates to its schedule context.
+- **Context markers** belong to another day within the active destination/trip scope. Their labels identify them as not on the selected day; activating one selects and frames its map context without changing the destination or day filters.
 - Category filters apply to active and context markers.
 - Cancelled activities do not produce normal markers.
 - Unreferenced catalog places do not appear and do not affect camera bounds.
 - Selected transport endpoints and routes have the strongest map emphasis.
 
 The timeline can stay day-filtered while the map provides contextual orientation.
+
+The Destination selector is the only interaction that changes the destination
+filter. The Day selector and visible day headings are the only interactions that
+change the day filter. Activity rows, transport rows, markers, and routes change
+selection, popup, and camera state only. **Overview** is the explicit reset and
+clears both filters.
 
 ## Sizing and responsive controls
 

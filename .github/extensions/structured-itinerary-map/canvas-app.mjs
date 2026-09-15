@@ -1,5 +1,6 @@
 import {
     advanceRevision as advanceKnownRevision,
+    activitySelection,
     activityMatchesFilters as matchesActivityFilters,
     boundsForCoordinates,
     basemapStyleHealth,
@@ -10,14 +11,16 @@ import {
     darkStyleTransformCoverage,
     dayTimeZoneContext,
     directTransportLines as makeDirectTransportLines,
+    destinationFilterTransition,
     disposeMapResources,
     focusIdentity,
     focusSelector as selectorForFocus,
-    focusForTransportLeg as focusForLeg,
+    dayFilterTransition,
     legMatchesFilters as matchesLegFilters,
     mapPalette as paletteForTheme,
     mapErrorSeverity,
     mapStyleUrl as styleUrlForTheme,
+    overviewFilterTransition,
     precomputeTimelineRows,
     resolveFocus as resolveFocusState,
     shouldApplyAuthoritativeFocus,
@@ -26,6 +29,7 @@ import {
     themeFromPreference as resolveTheme,
     timelineEntriesForDay,
     transformMapStyle as transformStyleForTheme,
+    transportSelection,
     unwrapTransportPoints as unwrapLegPoints,
     visibleStayLocationIds,
     visibleTransportLegIds,
@@ -488,7 +492,7 @@ export function startCanvasApp({
           placesById
         }, selectedLegId);
         if (markerLeg) {
-          selectTransportLeg(markerLeg.id);
+          selectTransportLeg(markerLeg.id, place.id);
           return;
         }
         const eligibleScheduled = activeScheduled.filter(row => selectedCategories.has(row.category));
@@ -505,7 +509,7 @@ export function startCanvasApp({
           transportEnabled: selectedCategories.has("transport"),
           placesById
         }, selectedLegId);
-        if (contextLeg) selectTransportLeg(contextLeg.id);
+        if (contextLeg) selectTransportLeg(contextLeg.id, place.id);
       });
       markers.set(place.id, marker);
       }
@@ -527,6 +531,15 @@ export function startCanvasApp({
       });
       map.on("mouseenter", "stay-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "stay-fill", () => { map.getCanvas().style.cursor = ""; });
+      const selectRoute = event => {
+        const legId = event.features?.[0]?.properties?.id;
+        if (legId) selectTransportLeg(legId);
+      };
+      for (const layerId of ["transport-active", "transport-tentative", "transport-cancelled", "transport-selected"]) {
+        map.on("click", layerId, selectRoute);
+        map.on("mouseenter", layerId, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layerId, () => { map.getCanvas().style.cursor = ""; });
+      }
     }
 
     function rebuildMapStyle() {
@@ -662,13 +675,16 @@ export function startCanvasApp({
     itinerary.locations.forEach(location => locationSelect.add(createOption(location.name, location.id)));
     locationSelect.value = selectedLocationId;
     locationSelect.addEventListener("change", () => {
-      selectedLocationId = locationSelect.value;
-      selectedDayId = "";
+      const next = destinationFilterTransition(currentFocus(), locationSelect.value, daysById);
+      selectedLocationId = next.locationId;
+      selectedDayId = next.dayId;
       selectedActivityId = "";
       selectedLegId = "";
       selectedMarkerPlaceIds = new Set();
-      daySelect.value = "";
+      daySelect.value = selectedDayId;
+      updateDayOptions();
       if (selectedLocationId) focusLocation(selectedLocationId);
+      else if (selectedDayId) focusDay(selectedDayId);
       else focusPlaces(currentVisiblePlaces());
       render();
       syncFocus();
@@ -678,15 +694,23 @@ export function startCanvasApp({
     daySelect.add(createOption("All days", ""));
     orderedDays.forEach(day => daySelect.add(createOption(formatShortDate(day.date) + " — " + day.title, day.id)));
     daySelect.value = selectedDayId;
+    function updateDayOptions() {
+      for (const option of daySelect.options) {
+        const day = option.value ? daysById.get(option.value) : undefined;
+        const incompatible = Boolean(day && selectedLocationId && !day.locationIds.includes(selectedLocationId));
+        option.disabled = incompatible;
+        option.hidden = incompatible;
+      }
+    }
+    updateDayOptions();
     daySelect.addEventListener("change", () => {
-      selectedDayId = daySelect.value;
+      const next = dayFilterTransition(currentFocus(), daySelect.value, daysById);
+      selectedDayId = next.dayId;
+      daySelect.value = selectedDayId;
       selectedActivityId = "";
       selectedLegId = "";
       selectedMarkerPlaceIds = new Set();
       if (selectedDayId) {
-        const day = daysById.get(selectedDayId);
-        selectedLocationId = day.locationIds.length === 1 ? day.locationIds[0] : "";
-        locationSelect.value = selectedLocationId;
         focusDay(selectedDayId);
       } else if (selectedLocationId) focusLocation(selectedLocationId);
       else focusPlaces(currentVisiblePlaces());
@@ -736,13 +760,15 @@ export function startCanvasApp({
     }
 
     document.getElementById("overview").addEventListener("click", () => {
-      selectedLocationId = "";
-      selectedDayId = "";
+      const next = overviewFilterTransition();
+      selectedLocationId = next.locationId;
+      selectedDayId = next.dayId;
       selectedActivityId = "";
       selectedLegId = "";
       selectedMarkerPlaceIds = new Set();
       locationSelect.value = "";
       daySelect.value = "";
+      updateDayOptions();
       render();
       focusPlaces(currentVisiblePlaces());
       syncFocus();
@@ -937,15 +963,14 @@ export function startCanvasApp({
         );
         heading.append(headingMain, daySide);
         heading.addEventListener("click", () => {
-          selectedDayId = dayId;
-          selectedLocationId = day.locationIds.length === 1 ? day.locationIds[0] : "";
+          const next = dayFilterTransition(currentFocus(), dayId, daysById);
+          selectedDayId = next.dayId;
           selectedActivityId = "";
           selectedLegId = "";
           selectedMarkerPlaceIds = new Set();
-          daySelect.value = dayId;
-          locationSelect.value = selectedLocationId;
+          daySelect.value = selectedDayId;
           render();
-          focusDay(dayId);
+          if (selectedDayId) focusDay(selectedDayId);
           syncFocus();
         });
         section.appendChild(heading);
@@ -1146,13 +1171,11 @@ export function startCanvasApp({
 
     function selectActivity(activityId, fromMarker = false) {
       const row = activitiesById.get(activityId);
-      selectedDayId = row.day.id;
-      selectedLocationId = row.effectiveLocationId || (row.day.locationIds.length === 1 ? row.day.locationIds[0] : "");
-      selectedActivityId = activityId;
-      selectedLegId = "";
-      selectedMarkerPlaceIds = new Set(row.place ? [row.place.id] : []);
-      daySelect.value = selectedDayId;
-      locationSelect.value = selectedLocationId;
+      if (!row) return;
+      const selection = activitySelection(row);
+      selectedActivityId = selection.activityId;
+      selectedLegId = selection.legId;
+      selectedMarkerPlaceIds = new Set(selection.placeIds);
       render();
       if (row.place && !activityIsCancelled(row)) {
         if (map && styleReady) {
@@ -1163,28 +1186,33 @@ export function startCanvasApp({
         });
         const marker = markers.get(row.place.id);
         if (!fromMarker && marker && !marker.getPopup().isOpen()) marker.togglePopup();
+        if (fromMarker && marker) {
+          requestAnimationFrame(() => {
+            if (!marker.getPopup().isOpen()) marker.togglePopup();
+          });
+        }
         }
       }
-      syncFocus();
       requestAnimationFrame(() => document.querySelector('[data-id="' + CSS.escape(activityId) + '"]')?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" }));
     }
 
-    function selectTransportLeg(legId) {
+    function selectTransportLeg(legId, markerPlaceId = "") {
       const leg = transportLegsById.get(legId);
       if (!leg) return;
       const origin = placesById.get(leg.originPlaceId);
       const destination = placesById.get(leg.destinationPlaceId);
-      selectedActivityId = "";
-      selectedLegId = legId;
-      selectedMarkerPlaceIds = new Set([origin.id, destination.id]);
-      const next = focusForLeg(leg, daysById);
-      selectedDayId = next.dayId;
-      selectedLocationId = next.locationId;
-      daySelect.value = selectedDayId;
-      locationSelect.value = selectedLocationId;
+      const selection = transportSelection(leg);
+      selectedActivityId = selection.activityId;
+      selectedLegId = selection.legId;
+      selectedMarkerPlaceIds = new Set(selection.placeIds);
       render();
       focusTransportLeg(leg);
-      syncFocus();
+      if (markerPlaceId) {
+        const marker = markers.get(markerPlaceId);
+        requestAnimationFrame(() => {
+          if (marker && !marker.getPopup().isOpen()) marker.togglePopup();
+        });
+      }
       requestAnimationFrame(() => document.querySelector('[data-leg-id="' + CSS.escape(legId) + '"]')?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" }));
     }
 
@@ -1197,6 +1225,7 @@ export function startCanvasApp({
       selectedLocationId = next.locationId;
       daySelect.value = selectedDayId;
       locationSelect.value = selectedLocationId;
+      updateDayOptions();
       render();
       if (selectedDayId) focusDay(selectedDayId);
       else if (selectedLocationId) focusLocation(selectedLocationId);
@@ -1419,6 +1448,11 @@ export function startCanvasApp({
       teardown,
       getState: () => ({
         focus: currentFocus(),
+        selection: {
+          activityId: selectedActivityId,
+          legId: selectedLegId,
+          placeIds: [...selectedMarkerPlaceIds],
+        },
         serverFocusRevision,
         styleReady,
         theme: {

@@ -112,10 +112,16 @@ function fakeMapLibre(records) {
         }
         on(name, layerOrHandler, handler) {
             const callback = handler ?? layerOrHandler;
-            if (!this.handlers.has(name)) this.handlers.set(name, []);
-            this.handlers.get(name).push(callback);
+            const key = handler ? `${name}:${layerOrHandler}` : name;
+            if (!this.handlers.has(key)) this.handlers.set(key, []);
+            this.handlers.get(key).push(callback);
         }
-        emit(name, value = {}) { for (const handler of this.handlers.get(name) ?? []) handler(value); }
+        emit(name, value = {}, layerId) {
+            for (const handler of this.handlers.get(name) ?? []) handler(value);
+            if (layerId) {
+                for (const handler of this.handlers.get(`${name}:${layerId}`) ?? []) handler(value);
+            }
+        }
         addControl(control) { records.controls.push(control); }
         isStyleLoaded() { return true; }
         getStyle() { return this.style; }
@@ -247,6 +253,12 @@ test("duplicate library registration reuses the existing custom element", () => 
 test("component supports property data, namespaced focus, attribute changes, and teardown", async (t) => {
     const window = setupWindow();
     t.after(() => window.close());
+    let historyWrites = 0;
+    const nativePushState = window.history.pushState.bind(window.history);
+    window.history.pushState = (...args) => {
+        historyWrites += 1;
+        return nativePushState(...args);
+    };
     const added = [];
     const removed = [];
     const nativeAdd = window.addEventListener.bind(window);
@@ -269,6 +281,15 @@ test("component supports property data, namespaced focus, attribute changes, and
     day.click();
     await tick();
     assert.equal(window.location.hash, "#second-map.day=singapore-waterfront");
+    assert.equal(historyWrites, 1);
+    element.shadowRoot.querySelector('[data-id="marina-bay-walk"]').click();
+    await tick();
+    assert.equal(
+        window.location.hash,
+        "#second-map.day=singapore-waterfront",
+        "item selection must not synchronize a changed filter focus",
+    );
+    assert.equal(historyWrites, 1, "item selection must not write synchronized focus");
     element.remove();
     assert(added.some(([name]) => name === "online"));
     assert(removed.some(([name]) => name === "online"));
@@ -503,13 +524,57 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         element.shadowRoot.querySelector(".shell").getBoundingClientRect = () => ({ width: 420 });
         resizeCallback();
         const markerFor = (name) => records.markers.find((marker) => marker.element.getAttribute("aria-label")?.includes(name));
+        const locationSelect = element.shadowRoot.getElementById("location");
         const daySelect = element.shadowRoot.getElementById("day");
+        locationSelect.value = "hanoi";
+        locationSelect.dispatchEvent(new window.Event("change"));
         daySelect.value = "hanoi-old-quarter";
         daySelect.dispatchEvent(new window.Event("change"));
+        const assertHanoiFilters = () => {
+            assert.equal(locationSelect.value, "hanoi");
+            assert.equal(daySelect.value, "hanoi-old-quarter");
+        };
         assert(markerFor("Old Quarter").element.classList.contains("active"));
         assert(markerFor("Noi Bai").element.classList.contains("context"));
         assert.match(markerFor("Noi Bai").element.getAttribute("aria-label"), /not on selected day/);
         assert.equal(markerFor("Tan Son Nhat").added, false);
+        const templeCard = element.shadowRoot.querySelector('[data-id="temple-literature-visit"]');
+        templeCard.click();
+        assertHanoiFilters();
+        assert.equal(
+            element.shadowRoot.querySelector('[data-id="temple-literature-visit"]').getAttribute("aria-pressed"),
+            "true",
+        );
+        assert(markerFor("Temple of Literature").element.classList.contains("selected"));
+        markerFor("Temple of Literature").element.click();
+        await tick();
+        assertHanoiFilters();
+        assert.equal(markerFor("Temple of Literature").popup.isOpen(), true);
+
+        daySelect.value = "saigon-central";
+        daySelect.dispatchEvent(new window.Event("change"));
+        assert.equal(locationSelect.value, "hanoi");
+        assert.equal(daySelect.value, "saigon-central");
+        const flightCard = element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]');
+        flightCard.click();
+        assert.equal(locationSelect.value, "hanoi");
+        assert.equal(daySelect.value, "saigon-central");
+        assert.equal(
+            element.shadowRoot.querySelector('[data-leg-id="hanoi-to-saigon"]').getAttribute("aria-pressed"),
+            "true",
+        );
+        assert(markerFor("Noi Bai").element.classList.contains("selected"));
+        assert(markerFor("Tan Son Nhat").element.classList.contains("selected"));
+
+        daySelect.value = "";
+        daySelect.dispatchEvent(new window.Event("change"));
+        const saigonHeading = element.shadowRoot.querySelector('[data-day-id="saigon-central"]');
+        saigonHeading.click();
+        assert.equal(locationSelect.value, "hanoi");
+        assert.equal(daySelect.value, "saigon-central");
+
+        daySelect.value = "hanoi-old-quarter";
+        daySelect.dispatchEvent(new window.Event("change"));
         const transportChip = [...element.shadowRoot.querySelectorAll("#chips .chip")]
             .find((button) => button.textContent.includes("Transport"));
         transportChip.click();
@@ -517,9 +582,33 @@ test("component follows dark and reduced-motion preferences without host CSS lea
         transportChip.click();
         assert.equal(markerFor("Noi Bai").added, true);
         markerFor("Noi Bai").element.click();
-        assert.equal(daySelect.value, "saigon-central");
+        await tick();
+        assertHanoiFilters();
         assert(markerFor("Noi Bai").element.classList.contains("selected"));
         assert(markerFor("Tan Son Nhat").element.classList.contains("selected"));
+        assert.equal(markerFor("Noi Bai").popup.isOpen(), true);
+        assert(
+            element.shadowRoot.querySelectorAll(".day-group").length > 0,
+            "context selection must not empty the timeline",
+        );
+        records.maps[0].emit("click", {
+            features: [{ properties: { id: "hanoi-to-saigon" } }],
+        }, "transport-selected");
+        assertHanoiFilters();
+        assert(records.cameras.some(([kind]) => kind === "bounds"));
+
+        locationSelect.value = "singapore";
+        locationSelect.dispatchEvent(new window.Event("change"));
+        assert.equal(locationSelect.value, "singapore");
+        assert.equal(daySelect.value, "", "destination changes clear an incompatible day without choosing another");
+        locationSelect.value = "";
+        locationSelect.dispatchEvent(new window.Event("change"));
+        daySelect.value = "saigon-central";
+        daySelect.dispatchEvent(new window.Event("change"));
+        assert.equal(locationSelect.value, "", "day selector must not derive a destination");
+        element.shadowRoot.getElementById("overview").click();
+        assert.equal(locationSelect.value, "");
+        assert.equal(daySelect.value, "");
         const filters = element.shadowRoot.getElementById("filters");
         assert.equal(filters.open, false);
         assert.equal(filters.querySelector("summary").getAttribute("aria-expanded"), "false");

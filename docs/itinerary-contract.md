@@ -517,7 +517,7 @@ Days, activities, and transport legs share the same status enum. A missing statu
 - Cancelled activities appear subdued in the timeline with a cancellation badge; they do not contribute markers.
 - Cancelled transport legs appear in the timeline and as a subdued dashed route. Selecting one reveals its route and both endpoints.
 - Schedule-only activities appear with an explicit label, regardless of status.
-- Selecting a day keeps non-cancelled, category-enabled mapped places from other days visible as subdued context markers within the active destination. Context markers are labelled as not being on the selected day and are clickable to navigate to their schedule; they do not widen the selected day's camera bounds.
+- Selecting a day keeps non-cancelled, category-enabled mapped places from other days visible as subdued context markers within the active destination. Context markers are labelled as not being on the selected day; clicking one selects and frames its map context without changing the destination or day filters, emptying the timeline, or widening the selected day's ordinary camera bounds.
 
 The [browser library guide](browser-library.md#rendering-and-interaction) describes active, selected, and context marker interaction across component widths.
 

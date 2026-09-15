@@ -14,6 +14,7 @@ import {
 import {
     advanceRevision,
     activityMatchesFilters,
+    activitySelection,
     basemapStyleHealth,
     boundsForCoordinates,
     cameraAnimationOptions,
@@ -23,14 +24,17 @@ import {
     darkStyleTransformCoverage,
     dayTimeZoneContext,
     directTransportLines,
+    destinationFilterTransition,
     disposeMapResources,
     focusIdentity,
     focusForTransportLeg,
     focusSelector,
     legMatchesFilters,
+    dayFilterTransition,
     mapPalette,
     mapErrorSeverity,
     mapStyleUrl,
+    overviewFilterTransition,
     precomputeTimelineRows,
     resolveFocus,
     safeJson,
@@ -41,6 +45,7 @@ import {
     themeFromPreference,
     timelineEntriesForDay,
     transformMapStyle,
+    transportSelection,
     unwrapCoordinates,
     unwrapTransportPoints,
     visibleStayLocationIds,
@@ -425,6 +430,64 @@ test("focus transitions clear stale state and infer only sole day locations", ()
     assert.deepEqual(resolveFocus({ dayId: "missing", locationId: "missing" }, daysById, locationsById), {
         dayId: "",
         locationId: "",
+    });
+});
+
+test("user filter transitions preserve ownership boundaries", () => {
+    const daysById = new Map(sample.days.map((day) => [day.id, day]));
+    assert.deepEqual(
+        destinationFilterTransition(
+            { locationId: "", dayId: "hanoi-old-quarter" },
+            "hanoi",
+            daysById,
+        ),
+        { locationId: "hanoi", dayId: "hanoi-old-quarter" },
+    );
+    assert.deepEqual(
+        destinationFilterTransition(
+            { locationId: "hanoi", dayId: "hanoi-old-quarter" },
+            "singapore",
+            daysById,
+        ),
+        { locationId: "singapore", dayId: "" },
+    );
+    assert.deepEqual(
+        dayFilterTransition(
+            { locationId: "hanoi", dayId: "" },
+            "hanoi-old-quarter",
+            daysById,
+        ),
+        { locationId: "hanoi", dayId: "hanoi-old-quarter" },
+    );
+    assert.deepEqual(
+        dayFilterTransition(
+            { locationId: "hanoi", dayId: "hanoi-old-quarter" },
+            "singapore-waterfront",
+            daysById,
+        ),
+        { locationId: "hanoi", dayId: "hanoi-old-quarter" },
+    );
+    assert.deepEqual(overviewFilterTransition(), { locationId: "", dayId: "" });
+    const activity = {
+        id: "visit",
+        place: { id: "museum" },
+        day: { id: "day-1", locationIds: ["city"] },
+        effectiveLocationId: "city",
+    };
+    assert.deepEqual(activitySelection(activity), {
+        activityId: "visit",
+        legId: "",
+        placeIds: ["museum"],
+    });
+    assert.deepEqual(transportSelection({
+        id: "train",
+        dayId: "day-2",
+        originPlaceId: "station-a",
+        destinationPlaceId: "station-b",
+    }), {
+        activityId: "",
+        legId: "train",
+        placeIds: ["station-a", "station-b"],
     });
 });
 
