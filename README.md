@@ -12,6 +12,20 @@ The project provides one rendering system in three delivery modes:
 
 All modes share the versioned itinerary contract, semantic validator, renderer, view-model helpers, MapLibre 6.9.0 integration, and OpenFreeMap basemap styles.
 
+## Trip-planning skill
+
+The project-scoped `plan-trip` Agent Skill turns requests such as “plan my trip,” “turn this trip into an itinerary,” and “update my itinerary” into the canonical map-ready document. It distinguishes booked anchors from preferences, selectively verifies current facts that affect feasibility, and presents a concise day-by-day proposal before changing files.
+
+The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft. After approval it writes `itineraries/<trip-id>.json`, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
+
+Validate any itinerary directly:
+
+```powershell
+npm run validate:itinerary -- itineraries\<trip-id>.json
+```
+
+The command uses the exact canonical JSON Schema and semantic validator, enforces the 1 MiB limit and project-contained path rules, prints actionable errors, and exits nonzero on failure. Add `--json` for machine-readable output. See [the skill instructions](.github/skills/plan-trip/SKILL.md) and [workflow examples](.github/skills/plan-trip/references/scenarios.md).
+
 ## Features
 
 - Destination, day, category, and stay-area controls
@@ -190,6 +204,7 @@ Node.js 24 is required.
 npm ci
 npm run build
 npm test
+npm run validate:itinerary -- examples\sample-itinerary.json
 npm run build:check
 npm run check
 ```
@@ -241,5 +256,5 @@ Structured Itinerary Map source and the distributable browser library are availa
 - Every mappable location and place requires coordinates; the project performs no geocoding.
 - OpenFreeMap basemaps require network access. The timeline and controls continue to operate when map resources fail.
 - `file://` behavior varies by browser; static HTTP is the supported preview and deployment path.
-- The project does not construct itineraries from prose.
+- The planning skill requires explicit approval before it writes or updates an itinerary.
 - The repository does not publish a hosted browser-library CDN.

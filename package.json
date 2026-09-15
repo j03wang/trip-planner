@@ -8,7 +8,8 @@
     "build": "node scripts/build-browser-library.mjs",
     "build:check": "node scripts/build-browser-library.mjs --check",
     "check": "node scripts/check-project.mjs && npm run build:check",
-    "test": "node --test"
+    "test": "node --test",
+    "validate:itinerary": "node scripts/validate-itinerary.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

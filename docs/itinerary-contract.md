@@ -27,6 +27,14 @@ The on-disk `open-input.schema.json` uses a relative `$ref` to `itinerary.schema
 
 The itinerary schema identifies version 1.0 with the intentionally non-resolvable URI `urn:trip-planner:itinerary:1.0`; no public repository URL is implied.
 
+Validate a project-contained itinerary against both canonical layers:
+
+```powershell
+npm run validate:itinerary -- itineraries\<trip-id>.json
+```
+
+The command exits nonzero for path, access, size, JSON, schema, or semantic failures. Add `--json` for structured output.
+
 ### Open by project path
 
 ```json
