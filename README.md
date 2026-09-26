@@ -16,7 +16,7 @@ All modes share the versioned itinerary contract, semantic validator, renderer, 
 
 The project-scoped `plan-trip` Agent Skill turns requests such as “plan my trip,” “turn this trip into an itinerary,” and “update my itinerary” into the canonical map-ready document. It distinguishes booked anchors from preferences, selectively verifies current facts that affect feasibility, and presents a concise day-by-day proposal before changing files.
 
-The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft. After approval it writes `itineraries/<trip-id>.json`, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
+For updates, the skill reassesses the whole trip, rebalances affected days, and shows a full revised day-by-day proposal with material changes highlighted. It keeps unaffected decisions and booked anchors intact rather than patching events in isolation. The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft. After approval it writes `itineraries/<trip-id>.json`, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
 
 Validate any itinerary directly:
 

@@ -11,10 +11,10 @@ Create practical travel plans, obtain explicit approval, then materialize a vali
 
 ## Non-negotiable workflow
 
-1. **Understand the request.** If this updates an itinerary, read the existing file before proposing changes. Separate fixed/booked anchors from preferences and assumptions.
+1. **Understand the request.** If this updates an itinerary, read the entire existing file and the requested change before proposing anything. Separate fixed/booked anchors from preferences and assumptions.
 2. **Gather only high-impact gaps.** Ask one focused question at a time when interaction is available. Infer low-risk defaults, state them, and avoid a long questionnaire.
 3. **Research selectively.** Verify current facts that can change feasibility. Cite sources in the planning response.
-4. **Present a concise day-by-day draft.** Include destinations, major activities, transport, pace/energy, optional alternatives, and unresolved assumptions.
+4. **Present a concise day-by-day draft.** Include destinations, major activities, transport, pace/energy, optional alternatives, and unresolved assumptions. For updates, present the full refreshed trip with material changes highlighted, not just a patch or a list of affected events.
 5. **Get explicit approval.** Ask the user to approve the draft or request adjustments. Do not create, overwrite, or modify itinerary JSON and do not open the map before clear approval.
 6. **Materialize after approval.** Write canonical schema version `1.0` JSON, validate it, correct every error, and open the map.
 
@@ -34,13 +34,19 @@ Protect fixed anchors first: dates, arrival/departure, booked transport, lodging
 - Treat visa, health, and safety information as an official-source check, not legal or medical advice.
 - Do not book or purchase anything and do not imply guarantees.
 
+## Revising a trip as a whole
+
+When a change is requested, reassess the complete trip rather than inserting or moving an isolated event. Trace its effects across days, locations, travel time, reservations, opening constraints, rest, pace, and the traveler's stated priorities. Rebalance affected days and their neighbors so the revised route and schedule remain feasible. Check the resulting plan from arrival through departure for gaps, conflicts, needless backtracking, and inconsistent detail or timing. Do not make gratuitous changes to unaffected days or silently alter booked anchors.
+
+Show a **full refreshed day-by-day draft** in the same level of detail and style throughout the trip. Clearly mark what materially changed, why, and what remains fixed; explain any displaced or removed activities and unresolved tradeoffs. Include unchanged days so the user can judge the change in the context of the whole trip. Obtain approval for this integrated proposal, not merely the requested event edit.
+
 ## Approval gate
 
 End the draft with a direct approval request. A valid approval clearly accepts materialization, such as “Approve this draft” or an unambiguous equivalent. Questions, partial preferences, and tentative reactions are not approval. Incorporate requested adjustments and present the revised draft before asking again.
 
 ## Materialization
 
-Use `itineraries/<trip-id>.json`, where `<trip-id>` is a stable lowercase kebab-case identifier. Do not overwrite an existing file unless the user explicitly approved updating that itinerary. For updates, preserve stable IDs, booked statuses, and unrelated user decisions; show material changes before approval.
+Use `itineraries/<trip-id>.json`, where `<trip-id>` is a stable lowercase kebab-case identifier. Do not overwrite an existing file unless the user explicitly approved updating that itinerary. For updates, preserve stable IDs for continuing entities, booked statuses, and unrelated user decisions. Apply approved changes throughout the itinerary so days, activities, transport, places, dates, and descriptions agree with the refreshed draft; do not leave conflicting or orphaned entries from the old plan. Keep the document's detail, naming, and certainty conventions consistent across changed and unchanged days.
 
 Build the document from the canonical schema and shared semantics:
 

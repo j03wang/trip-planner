@@ -30,8 +30,7 @@ These are process examples, not itinerary templates. They demonstrate the approv
 
 1. Read the existing itinerary and working-tree state before proposing edits.
 2. Preserve trip, place, day, activity, and transport IDs where their entities remain the same.
-3. Explain affected days, buffers, reservations, and any activity displacement. Do not change unrelated choices.
-4. Ask for explicit approval of the material changes.
-5. After approval, edit the existing path rather than creating a duplicate. Preserve `booked` status and update only verified local times.
+3. Reassess every day against the new train time: arrival and departure margins, connections, opening constraints, pacing, reservations, and displaced activities. Rebalance Tuesday and neighboring days as needed without changing unrelated choices.
+4. Show the full revised trip day by day at a uniform level of detail, marking material changes and explaining affected buffers, reservations, and activity displacement. Ask for explicit approval of the integrated revision.
+5. After approval, update the existing path rather than creating a duplicate. Keep days, activities, and transport consistent with the approved draft, preserve continuing IDs and `booked` status, and use only verified local times.
 6. Run validation, correct errors, and refresh the same `documentId` preview.
-
