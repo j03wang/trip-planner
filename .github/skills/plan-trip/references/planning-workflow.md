@@ -19,6 +19,8 @@ Ask one question at a time, prioritizing:
 
 Stop asking when a useful draft can be produced. State inferred defaults in the draft.
 
+For a new itinerary, identify the output path before asking for approval: use a user-specified path, otherwise the `plan-trip` directory in accepted repository instructions, or ask for a project-relative directory if neither is supplied. For updates, keep the existing file path. Include the chosen path in the draft so approval covers the destination as well as the plan.
+
 ## Selective research
 
 Research facts whose current state affects the route or a fixed anchor:
@@ -67,6 +69,6 @@ Show local times only when known or clearly labeled as estimates. Protect arriva
 
 Read the entire current JSON and its Git state first, and retain the original content or hash used for the proposal. Treat the request as a constraint on the whole itinerary: identify fixed anchors and dependencies, then check every day for effects on route, transfers and buffers, opening constraints, energy and rest, preferences, and arrival/departure margins. Rebalance affected days and adjacent days where needed; leave unrelated choices intact. Recheck selectively any current facts on which the revised plan depends.
 
-Present a full refreshed day-by-day draft at a consistent level of detail. Mark material differences from the existing plan inline and explain why they are needed, including displaced or removed activities; distinguish unchanged days and fixed anchors. Summarize the tradeoffs and any decisions still needed. Ask for approval of the complete revised plan, rather than approval of an isolated edit. If the user requests another adjustment, revise and show the full draft again.
+Present a full refreshed day-by-day draft at a consistent level of detail. Mark material differences from the existing plan inline and explain why they are needed, including displaced or removed activities; distinguish unchanged days and fixed anchors. Summarize the tradeoffs and any decisions still needed. State the existing output path and ask for approval of the complete revised plan, rather than approval of an isolated edit. If the user requests another adjustment, revise and show the full draft again.
 
 Preserve stable IDs for continuing domain objects, even if labels or notes change. After approval, update the existing document coherently: reconcile days, activities, places, and transport with the draft; remove obsolete references; and keep naming, timing precision, and status conventions consistent. Immediately before writing, reread the file. If it changed after the proposal, merge both intents only when every change is understood; otherwise stop and present the conflict for approval. Do not overwrite unrelated modifications or downgrade `booked` status without explicit approval.

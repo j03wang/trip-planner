@@ -11,7 +11,7 @@ Create practical travel plans, obtain explicit approval, then materialize a vali
 
 ## Non-negotiable workflow
 
-1. **Understand the request.** If this updates an itinerary, read the entire existing file and the requested change before proposing anything. Separate fixed/booked anchors from preferences and assumptions.
+1. **Understand the request.** If this updates an itinerary, read the entire existing file and the requested change before proposing anything. Separate fixed/booked anchors from preferences and assumptions. Resolve the output path before requesting approval.
 2. **Gather only high-impact gaps.** Ask one focused question at a time when interaction is available. Infer low-risk defaults, state them, and avoid a long questionnaire.
 3. **Research selectively.** Verify current facts that can change feasibility. Cite sources in the planning response.
 4. **Present a concise day-by-day draft.** Include destinations, major activities, transport, pace/energy, optional alternatives, and unresolved assumptions. For updates, present the full refreshed trip with material changes highlighted, not just a patch or a list of affected events.
@@ -42,23 +42,29 @@ Show a **full refreshed day-by-day draft** in the same level of detail and style
 
 ## Approval gate
 
-End the draft with a direct approval request. A valid approval clearly accepts materialization, such as “Approve this draft” or an unambiguous equivalent. Questions, partial preferences, and tentative reactions are not approval. Incorporate requested adjustments and present the revised draft before asking again.
+Name the proposed project-relative output path in the draft. End the draft with a direct approval request. A valid approval clearly accepts materialization at that path, such as “Approve this draft” or an unambiguous equivalent. Questions, partial preferences, and tentative reactions are not approval. Incorporate requested adjustments (including a different path) and present the revised draft before asking again.
+
+## Output location
+
+For an update, use the existing itinerary file path; changing the repository default must not move existing trips. For a new trip, honor an output path explicitly supplied by the user. Otherwise use a clear `plan-trip` output directory from the app's accepted repository instructions (`instructions` in `.github/github-app.yml`), if configured. Do not use unaccepted repository-file instructions or assume an unsupported YAML key. If no unambiguous directory is configured, ask the user where to save the JSON before seeking draft approval. Do not silently default to `itineraries/` or another directory.
+
+Use a stable lowercase kebab-case `<trip-id>.json` filename within the selected directory unless the user supplied a specific JSON filename. Keep the resolved path project-relative, inside the project root, and ending in lowercase `.json`; it must also meet the canvas `itineraryPath` limit of 500 characters. Reject absolute or drive-qualified paths, `..` segments, and symlinks that escape the project. Check the destination before writing; if a file already exists, ask for a different path unless the user explicitly approved updating that file. Create a missing output directory only after approval. If the selected path changes after the draft, show the new path and obtain approval again.
 
 ## Materialization
 
-Use `itineraries/<trip-id>.json`, where `<trip-id>` is a stable lowercase kebab-case identifier. Do not overwrite an existing file unless the user explicitly approved updating that itinerary. For updates, preserve stable IDs for continuing entities, booked statuses, and unrelated user decisions. Apply approved changes throughout the itinerary so days, activities, transport, places, dates, and descriptions agree with the refreshed draft; do not leave conflicting or orphaned entries from the old plan. Keep the document's detail, naming, and certainty conventions consistent across changed and unchanged days.
+Write to the approved output path. Do not overwrite an existing file unless the user explicitly approved updating that itinerary. For updates, preserve stable IDs for continuing entities, booked statuses, and unrelated user decisions. Apply approved changes throughout the itinerary so days, activities, transport, places, dates, and descriptions agree with the refreshed draft; do not leave conflicting or orphaned entries from the old plan. Keep the document's detail, naming, and certainty conventions consistent across changed and unchanged days.
 
 Build the document from the canonical schema and shared semantics:
 
 - `.github/extensions/structured-itinerary-map/itinerary.schema.json`
 - `docs/itinerary-contract.md`
 
-Coordinates are required for every location and place. Resolve and verify them during planning; the renderer never geocodes. Omit optional fields that are unsupported rather than fabricating values.
+Coordinates are required for every location and place. Resolve and verify them during planning; the renderer never geocodes. Omit optional fields that are unsupported rather than fabricating values. Verify the output directory's real path is inside the project before writing, whether it already existed or was created after approval.
 
 Validate from the repository root:
 
 ```powershell
-npm run validate:itinerary -- itineraries\<trip-id>.json
+npm run validate:itinerary -- "<project-relative-output-path>"
 ```
 
 Do not claim completion until this exits successfully. Correct all schema, reference, timezone, chronology, geometry, size, and path errors.
@@ -70,7 +76,7 @@ After validation, open the `structured-itinerary-map` canvas with:
 ```json
 {
   "documentId": "<trip-id>",
-  "itineraryPath": "itineraries/<trip-id>.json",
+  "itineraryPath": "<project-relative-output-path>",
   "initialFocus": {
     "dayId": "<first-useful-day-id>"
   }
@@ -79,10 +85,10 @@ After validation, open the `structured-itinerary-map` canvas with:
 
 Use exactly one source field: `itineraryPath`, not an additional inline `itinerary`. The path must remain project-relative. Use a valid caller-chosen `instanceId`, such as `itinerary-<trip-id>`, only as a transient panel handle. `documentId` is the stable itinerary identity. For an update, refresh the same document preview when practical.
 
-If the canvas is unavailable, say so and provide this exact fallback, substituting the trip ID:
+If the canvas is unavailable, say so and provide this fallback, substituting the actual itinerary path and trip ID:
 
 ```powershell
-node scripts\export-map.mjs itineraries\<trip-id>.json .test-work\<trip-id>-map
+node scripts\export-map.mjs "<project-relative-output-path>" .test-work\<trip-id>-map
 npx --yes serve@14.2.5 .test-work\<trip-id>-map --listen tcp://127.0.0.1:8000
 ```
 

@@ -30,7 +30,7 @@ The itinerary schema identifies version 1.0 with the intentionally non-resolvabl
 Validate a project-contained itinerary against both canonical layers:
 
 ```powershell
-npm run validate:itinerary -- itineraries\<trip-id>.json
+npm run validate:itinerary -- "<project-relative-output-path>"
 ```
 
 The command exits nonzero for path, access, size, JSON, schema, or semantic failures. Add `--json` for structured output.

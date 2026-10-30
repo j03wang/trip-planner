@@ -16,12 +16,21 @@ All modes share the versioned itinerary contract, semantic validator, renderer, 
 
 The project-scoped `plan-trip` Agent Skill turns requests such as “plan my trip,” “turn this trip into an itinerary,” and “update my itinerary” into the canonical map-ready document. It distinguishes booked anchors from preferences, selectively verifies current facts that affect feasibility, and presents a concise day-by-day proposal before changing files.
 
-For updates, the skill reassesses the whole trip, rebalances affected days, and shows a full revised day-by-day proposal with material changes highlighted. It keeps unaffected decisions and booked anchors intact rather than patching events in isolation. The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft. After approval it writes `itineraries/<trip-id>.json`, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
+For updates, the skill reassesses the whole trip, rebalances affected days, and shows a full revised day-by-day proposal with material changes highlighted. It keeps unaffected decisions and booked anchors intact rather than patching events in isolation. The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft and its output path. After approval it writes to the approved project-relative path, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
+
+To set a default directory for **new** trip JSON, add a `plan-trip` instruction to `.github/github-app.yml` (preserve any existing instructions):
+
+```yaml
+instructions: |
+  For plan-trip, write new itinerary JSON under travel-plans/.
+```
+
+Replace `travel-plans/` with your desired project-relative directory and review and accept the repository configuration in the app before using it. This uses the app's supported `instructions` field, not a custom configuration key. Without an accepted configured directory or a path in the request, the skill asks where to save the file; it does not default to `itineraries/`. Updates stay at their existing paths. The selected path must be inside the project and end in lowercase `.json` for validation and canvas preview. This repository leaves the default unset.
 
 Validate any itinerary directly:
 
 ```powershell
-npm run validate:itinerary -- itineraries\<trip-id>.json
+npm run validate:itinerary -- "<project-relative-output-path>"
 ```
 
 The command uses the exact canonical JSON Schema and semantic validator, enforces the 1 MiB limit and project-contained path rules, prints actionable errors, and exits nonzero on failure. Add `--json` for machine-readable output. See [the skill instructions](.github/skills/plan-trip/SKILL.md) and [workflow examples](.github/skills/plan-trip/references/scenarios.md).
