@@ -19,7 +19,7 @@ Ask one question at a time, prioritizing:
 
 Stop asking when a useful draft can be produced. State inferred defaults in the draft.
 
-For a new itinerary, identify the output path before asking for approval: use a user-specified path, otherwise the `plan-trip` directory in accepted repository instructions, or ask for a project-relative directory if neither is supplied. For updates, keep the existing file path. Include the chosen path in the draft so approval covers the destination as well as the plan.
+For a new itinerary, identify the output path before asking for approval: use a user-specified path, otherwise the target repository's instructions and naming conventions (including `AGENTS.md` or accepted app instructions), or ask for a project-relative path if neither is supplied. A path template can determine both directory and filename. For updates, keep the existing file path. Include the chosen path in the draft so approval covers the destination as well as the plan.
 
 ## Selective research
 

@@ -16,16 +16,33 @@ All modes share the versioned itinerary contract, semantic validator, renderer, 
 
 The project-scoped `plan-trip` Agent Skill turns requests such as “plan my trip,” “turn this trip into an itinerary,” and “update my itinerary” into the canonical map-ready document. It distinguishes booked anchors from preferences, selectively verifies current facts that affect feasibility, and presents a concise day-by-day proposal before changing files.
 
-For updates, the skill reassesses the whole trip, rebalances affected days, and shows a full revised day-by-day proposal with material changes highlighted. It keeps unaffected decisions and booked anchors intact rather than patching events in isolation. The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft and its output path. After approval it writes to the approved project-relative path, preserves stable IDs and booked decisions during updates, validates the file, and opens the `structured-itinerary-map` canvas with a stable `documentId`.
+For updates, the skill reassesses the whole trip, rebalances affected days, and shows a full revised day-by-day proposal with material changes highlighted. It keeps unaffected decisions and booked anchors intact rather than patching events in isolation. The approval gate is strict: the skill does not write JSON or open a map until the user explicitly approves the draft and its output path. After approval it writes to the approved project-relative path, preserves stable IDs and booked decisions during updates, validates the file, and previews the map if the target repository has the `structured-itinerary-map` canvas.
 
-To set a default directory for **new** trip JSON, add a `plan-trip` instruction to `.github/github-app.yml` (preserve any existing instructions):
+To use the skill in another repository, copy `.github/skills/plan-trip/` into that repository's skill directory. It uses canonical schema version 1.0, but does not require the target repository to have this project's scripts, schema, npm dependencies, or canvas. Keep a separate tooling checkout outside the target repository. At the start of each trip request, clone it if absent, or refresh a clean existing checkout to the latest `origin/main`:
+
+```text
+git clone https://github.com/j03wang/trip-planner.git "<tooling-checkout>"
+git -C "<tooling-checkout>" fetch origin main
+git -C "<tooling-checkout>" checkout --detach origin/main
+git -C "<tooling-checkout>" rev-parse HEAD
+```
+
+Only clone if the checkout does not exist, and check for local changes before updating it. Reuse the checkout across repositories; Node.js 24, Git, and network access to fetch the latest tooling are required, but no `npm install` is needed for validation or static map export. From the target repository root, run:
+
+```text
+node "<skill-directory>/scripts/validate.mjs" "<tooling-checkout>" "<project-relative-output-path>"
+```
+
+The wrapper fetches `origin/main` and refuses to validate if the checkout fell behind during planning. Refresh the checkout and recheck the contract before continuing, so the final document is never silently validated against a different version. It validates paths against the **target** repository and uses the same checkout for optional static map export when the target repository does not have the canvas. Do not copy the checkout into the target repository or assume a canvas exists there.
+
+For **new** trip JSON, the skill follows an explicit path or the target repository's output instructions and naming conventions, including `AGENTS.md` templates such as `trips/<trip-id>/itinerary.json`. If neither supplies a path, it asks before approval; updates remain at their existing paths. Alternatively, to configure a default in the GitHub Copilot app, add a `plan-trip` instruction to `.github/github-app.yml` in the target repository (preserve any existing instructions):
 
 ```yaml
 instructions: |
   For plan-trip, write new itinerary JSON under travel-plans/.
 ```
 
-Replace `travel-plans/` with your desired project-relative directory and review and accept the repository configuration in the app before using it. This uses the app's supported `instructions` field, not a custom configuration key. Without an accepted configured directory or a path in the request, the skill asks where to save the file; it does not default to `itineraries/`. Updates stay at their existing paths. The selected path must be inside the project and end in lowercase `.json` for validation and canvas preview. This repository leaves the default unset.
+Replace `travel-plans/` with your desired project-relative directory and review and accept the repository configuration in the app before using it. This uses the app's supported `instructions` field, not a custom configuration key. The selected path must be inside the project and end in lowercase `.json`. This repository leaves the default unset.
 
 Validate any itinerary directly:
 

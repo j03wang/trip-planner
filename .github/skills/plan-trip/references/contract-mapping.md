@@ -1,6 +1,6 @@
 # Contract mapping reference
 
-The canonical source is [`../../../extensions/structured-itinerary-map/itinerary.schema.json`](../../../extensions/structured-itinerary-map/itinerary.schema.json), with semantic rules in [`../../../../docs/itinerary-contract.md`](../../../../docs/itinerary-contract.md). Use this reference as a mapping checklist, not a substitute for validation.
+The canonical source is `itinerary.schema.json` and `docs/itinerary-contract.md` in the latest tooling checkout described in [the skill](../SKILL.md). The target repository does not need to contain them. Use this reference as a mapping checklist, not a substitute for validation with the installed skill's `scripts/validate.mjs`.
 
 ## Document mapping
 
@@ -55,4 +55,4 @@ Categories control filters and marker accents. Every activity requires a categor
 - Timed activities resolve a timezone.
 - Transfer days include both locations.
 - Unsupported prices, hours, availability, geometry, and stay polygons are omitted.
-- `npm run validate:itinerary -- <path>` exits zero.
+- `node "<skill-directory>/scripts/validate.mjs" "<tooling-checkout>" "<project-relative-output-path>"` exits zero from the target repository root.
